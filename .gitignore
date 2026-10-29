@@ -1,0 +1,17 @@
+objs/
+firmware*
+
+offset.local.mk
+
+tags
+cscope.*
+compile_commands.json
+
+third_party/
+
+boot.elf
+boot.map
+
+__pycache__/
+
+*.txt

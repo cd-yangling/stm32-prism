@@ -1,0 +1,5 @@
+BOARD      = bluepill_f103c8t6
+BOARD_CONF = -DCONFIG_STM32_ENABLE_DEBUG_SLEEP_STOP
+BOARD_CONF+= -DCONFIG_LED -DCONFIG_I2C1 -DCONFIG_MPU6050 -DCONFIG_SSD1306 -DCONFIG_USART1
+PROJ_SRC   = main.c board.c mpu_test1.c mpu_test2.c
+include ../../build/entry.mk

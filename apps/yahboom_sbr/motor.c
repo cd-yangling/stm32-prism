@@ -1,0 +1,96 @@
+/*                            _ooOoo_
+                            o8888888o
+                             88" . "88
+                             (| -_- |)
+                              O\ = /O
+                          ____/`---'\____
+                        .   ' \\| |// `.
+                         / \\||| : |||// \
+                       / _||||| -:- |||||- \
+                         | | \\\ - /// | |
+                       | \_| ''\---/'' | |
+                        \ .-\__ `-` ___/-. /
+                     ___`. .' /--.--\ `. . __
+                  ."" '< `.___\_<|>_/___.' >'"".
+                 | | : `- \`.;`\ _ /`;.`/ - ` : | |
+                   \ \ `-. \_ __\ /__ _/ .-` / /
+           ======`-.____`-.___\_____/___.-`____.-'======
+                              `=---='
+
+           .............................................
+                    佛祖保佑             永无BUG
+            佛曰:
+                    写字楼里写字间,写字间里程序员;
+                    程序人员写程序,又拿程序换酒钱.
+                    酒醒只在网上坐,酒醉还来网下眠;
+                    酒醉酒醒日复日,网上网下年复年.
+                    但愿老死电脑间,不愿鞠躬老板前;
+                    奔驰宝马贵者趣,公交自行程序员.
+                    别人笑我忒疯癫,我笑自己命太贱;
+                    不见满街漂亮妹,哪个归得程序员?
+*/
+
+/* Copyright (C) 2026 YangLing */
+
+#include <errno.h>
+#include <stddef.h>
+
+#include "dev/at8236.h"
+#include "motor.h"
+
+static uint8_t out_en;
+
+static int16_t clamp1000(int32_t v)
+{
+	if (1000 < v)
+	{
+		return 1000;
+	}
+
+	if (-1000 > v)
+	{
+		return -1000;
+	}
+
+	return (int16_t)v;
+}
+
+int motor_init(const struct motor_desc *m)
+{
+	out_en = 0u;
+
+	return at8236_init(m->h);
+}
+
+int motor_set(const struct motor_desc *m, int16_t car_duty)
+{
+	int32_t	chip;
+
+	if (NULL == m)
+	{
+		return -EINVAL;
+	}
+
+	if (0 != car_duty && 0u == out_en)
+	{
+		car_duty = 0;
+	}
+
+	chip = clamp1000(car_duty) * m->dir;
+
+	if (0 < chip)
+	{
+		chip += m->deadband;
+	}
+	else if (0 > chip)
+	{
+		chip -= m->deadband;
+	}
+
+	return at8236_set(m->h, clamp1000(chip));
+}
+
+void motor_output_enable(uint8_t en)
+{
+	out_en = en;
+}

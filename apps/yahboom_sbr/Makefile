@@ -1,0 +1,44 @@
+BOARD      = yahboom_sbr
+BOARD_CONF = -DCONFIG_STM32_ENABLE_DEBUG_SLEEP_STOP
+BOARD_CONF+= -DCONFIG_LED
+BOARD_CONF+= -DCONFIG_USART1
+BOARD_CONF+= -DCONFIG_UART5
+BOARD_CONF+= -DCONFIG_I2C1
+BOARD_CONF+= -DCONFIG_I2C_BITBANG
+BOARD_CONF+= -DCONFIG_I2C_BITBANG_FAST
+BOARD_CONF+= -DCONFIG_ADC1
+BOARD_CONF+= -DCONFIG_MPU6050
+BOARD_CONF+= -DCONFIG_MPU6050_INT
+BOARD_CONF+= -DCONFIG_SSD1306
+BOARD_CONF+= -DCONFIG_VOLTAGE_DIVIDER
+BOARD_CONF+= -DCONFIG_PWM_TIM8
+BOARD_CONF+= -DCONFIG_ENC_TIM3
+BOARD_CONF+= -DCONFIG_ENC_TIM4
+BOARD_CONF+= -DCONFIG_AT8236
+BOARD_CONF+= -DCONFIG_BUZZER
+BOARD_CONF+= -DCONFIG_KEY
+BOARD_CONF+= -DCONFIG_SONAR
+# 实验性质(UART DMA)
+BOARD_CONF+= -DCONFIG_UART_INTERRUPT_DRIVEN -DCONFIG_UART_ASYNC_API
+BOARD_CONF+= -DIRQ_PRIO_EXTI=1
+BOARD_CONF+= -DIRQ_PRIO_UART=2
+PROJ_SRC   = main.c board.c
+PROJ_SRC  += motor.c
+PROJ_SRC  += tasks/battery.c
+PROJ_SRC  += tasks/sonar.c
+PROJ_SRC  += control/control.c
+PROJ_SRC  += control/velocity.c
+PROJ_SRC  += control/mt_speed.c
+PROJ_SRC  += control/algo/balance_pd.c
+PROJ_SRC  += control/algo/velocity_pi.c
+PROJ_SRC  += control/algo/turn_pd.c
+PROJ_SRC  += control/imu.c
+PROJ_SRC  += tuning.c
+PROJ_SRC  += tools/debug_entry.c
+PROJ_SRC  += tools/debug_misc.c
+PROJ_SRC  += tools/debug_mpu6050.c
+PROJ_SRC  += tools/debug_motor.c
+PROJ_SRC  += app_die.c
+PROJ_SRC  += start_gate.c
+#PROJ_DEFS+= -DTUNE_LOCK
+include ../../build/entry.mk
