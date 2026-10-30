@@ -113,7 +113,7 @@ static void calibrate_offset(const struct sensor *imu, int16_t offset[6])
 
 void mpu_cf_demo1(void)
 {
-	int16_t offset[6];
+	int16_t offset[6] = { 0 };
 	const struct sensor *imu = board.imu1;
 	const struct display *disp = oled_init();
 

@@ -139,10 +139,12 @@ static const struct i2c_dev mpu1 =
 	.name	= "mpu6050",
 };
 MPU6050_DAT(mpu1_dat);
+static const struct mpu6050_axis_map mpu1_axis_map = MPU6050_AXIS_MAP_XFRONT_YLEFT_ZUP_INIT;
 static const struct mpu6050_dev mpu6050_dev =
 {
 	.i2c		= &mpu1,
 	.int_pin	= NULL,
+	.axis_map	= &mpu1_axis_map,
 	.smplrt_div	= 9,
 	.dlpf_cfg	= 3,
 	.gfs_sel	= 0,

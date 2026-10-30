@@ -93,6 +93,12 @@ struct mpu6050_axis_map
 	.z = { .src = MPU6050_AXIS_Z, .neg = 1 }	\
 }
 
+#define	MPU6050_AXIS_MAP_XFRONT_YLEFT_ZUP_INIT	{	\
+	.x = { .src = MPU6050_AXIS_X, .neg = 0 },	\
+	.y = { .src = MPU6050_AXIS_Y, .neg = 1 },	\
+	.z = { .src = MPU6050_AXIS_Z, .neg = 1 }	\
+}
+
 struct mpu6050_dev
 {
 	const struct i2c_dev			*	i2c;
