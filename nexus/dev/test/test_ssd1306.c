@@ -52,28 +52,21 @@ static int mock_init(const struct i2c_bus *b, const struct i2c_pins *p)
 	return 0;
 }
 
-static void mock_start(const struct i2c_bus *b)
+static int mock_xfer(const struct i2c_bus *b, uint8_t addr7, const struct i2c_msg *m, int n)
 {
-	(void)b;
-}
-
-static int mock_xfer(const struct i2c_bus *b, uint8_t addr7, int rd, uint8_t *buf, uint16_t len)
-{
-	uint16_t i;
+	int i;
+	uint16_t j;
 
 	(void)b;
-	(void)rd;
 	seen_addr7 = addr7;
-	for (i = 0; i < len && wire_n < WIRE_MAX; i++)
+	for (i = 0; i < n; i++)
 	{
-		wire[wire_n++] = buf[i];
+		for (j = 0; j < m[i].len && wire_n < WIRE_MAX; j++)
+		{
+			wire[wire_n++] = m[i].buf[j];
+		}
 	}
 	return 0;
-}
-
-static void mock_stop(const struct i2c_bus *b)
-{
-	(void)b;
 }
 
 static void mock_config(const struct i2c_bus *b, const uint32_t spd_hz)
@@ -85,9 +78,7 @@ static void mock_config(const struct i2c_bus *b, const uint32_t spd_hz)
 static const struct i2c_ops mock_i2c_ops =
 {
 	.init = mock_init,
-	.start = mock_start,
 	.xfer = mock_xfer,
-	.stop = mock_stop,
 	.config = mock_config,
 };
 

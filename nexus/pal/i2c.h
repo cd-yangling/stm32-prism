@@ -40,12 +40,18 @@
 struct i2c_bus;
 struct i2c_pins;
 
+struct i2c_msg
+{
+	uint8_t *buf;
+	uint16_t len;
+#define	I2C_MSG_READ			((1) << 0)
+	uint16_t flags;
+};
+
 struct i2c_ops
 {
 	int (*init)(const struct i2c_bus *b, const struct i2c_pins *pins);
-	void (*start)(const struct i2c_bus *b);
-	int (*xfer)(const struct i2c_bus *b, uint8_t addr7, int rd, uint8_t *buf, uint16_t len);
-	void (*stop)(const struct i2c_bus *b);
+	int (*xfer)(const struct i2c_bus *b, uint8_t addr7, const struct i2c_msg *m, int n);
 	void (*config)(const struct i2c_bus *b, const uint32_t spd_hz);
 };
 

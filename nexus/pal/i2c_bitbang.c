@@ -208,22 +208,22 @@ static void i2c_bitbang_stop(const struct i2c_bus *b)
 	delay_cyc(d->low);
 }
 
-static int i2c_bitbang_xfer(const struct i2c_bus *b, uint8_t addr7, int rd,
-	uint8_t *buf, uint16_t len)
+static int i2c_bitbang_seg(const struct i2c_bus *b, uint8_t addr7,
+	const struct i2c_msg *m)
 {
 	const struct i2c_bitbang_ctx *c = b->ctx;
-	uint8_t byte0 = (uint8_t)((addr7 << 1) | (uint8_t)(0 != rd));
+	uint8_t byte0 = (uint8_t)((addr7 << 1) | (m->flags & I2C_MSG_READ));
 
 	if (0 == bb_write_byte(c, byte0))
 	{
 		return -ENXIO;
 	}
 
-	if (0 == rd)
+	if (!(m->flags & I2C_MSG_READ))
 	{
-		for (uint16_t i = 0; i < len; i++)
+		for (uint16_t i = 0; i < m->len; i++)
 		{
-			if (0 == bb_write_byte(c, buf[i]))
+			if (0 == bb_write_byte(c, m->buf[i]))
 			{
 				return -ENXIO;
 			}
@@ -231,14 +231,30 @@ static int i2c_bitbang_xfer(const struct i2c_bus *b, uint8_t addr7, int rd,
 	}
 	else
 	{
-		for (uint16_t i = 0; i < len; i++)
+		for (uint16_t i = 0; i < m->len; i++)
 		{
-			buf[i] = bb_read_byte(c);
-			bb_write_bit(c, (i + 1u < len) ? 0 : 1);
+			m->buf[i] = bb_read_byte(c);
+			bb_write_bit(c, (i + 1u < m->len) ? 0 : 1);
 		}
 	}
 
 	return 0;
+}
+
+static int i2c_bitbang_xfer(const struct i2c_bus *b, uint8_t addr7,
+	const struct i2c_msg *m, int n)
+{
+	int ret = 0;
+
+	for (int i = 0; i < n && 0 == ret; i++)
+	{
+		i2c_bitbang_start(b);
+		ret = i2c_bitbang_seg(b, addr7, &m[i]);
+	}
+
+	i2c_bitbang_stop(b);
+
+	return ret;
 }
 
 static void i2c_bitbang_config(const struct i2c_bus *b, uint32_t spd_hz)
@@ -293,8 +309,6 @@ static int i2c_bitbang_init(const struct i2c_bus *b, const struct i2c_pins *pins
 const struct i2c_ops i2c_bitbang_ops =
 {
 	.init	= i2c_bitbang_init,
-	.start	= i2c_bitbang_start,
-	.stop	= i2c_bitbang_stop,
 	.xfer	= i2c_bitbang_xfer,
 	.config	= i2c_bitbang_config,
 };

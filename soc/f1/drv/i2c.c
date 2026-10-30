@@ -399,14 +399,30 @@ static int f1_i2c_master_receive(const struct i2c_ctx *c, uint8_t addr7, uint8_t
 	return ret;
 }
 
-static int f1_i2c_xfer(const struct i2c_bus *b, uint8_t addr7, int rd, uint8_t *buf, uint16_t len)
+static int f1_i2c_seg(const struct i2c_bus *b, uint8_t addr7, const struct i2c_msg *m)
 {
+	const struct i2c_ctx *c = b->ctx;
 	uint32_t t0 = tick_get();
 
-	if (rd)
-		return f1_i2c_master_receive(b->ctx, addr7, buf, len, t0);
+	if (m->flags & I2C_MSG_READ)
+		return f1_i2c_master_receive(c, addr7, m->buf, m->len, t0);
 	else
-		return f1_i2c_master_transmit(b->ctx, addr7, buf, len, t0);
+		return f1_i2c_master_transmit(c, addr7, m->buf, m->len, t0);
+}
+
+static int f1_i2c_xfer(const struct i2c_bus *b, uint8_t addr7, const struct i2c_msg *m, int n)
+{
+	int ret = 0;
+
+	for (int i = 0; i < n && 0 == ret; i++)
+	{
+		f1_i2c_start(b);
+		ret = f1_i2c_seg(b, addr7, &m[i]);
+	}
+
+	f1_i2c_stop(b);
+
+	return ret;
 }
 
 static void f1_i2c_config(const struct i2c_bus *b, uint32_t spd_hz)
@@ -476,8 +492,6 @@ static int f1_i2c_init(const struct i2c_bus *b, const struct i2c_pins *pins)
 static const struct i2c_ops i2cd_ops =
 {
 	.init		= f1_i2c_init,
-	.start		= f1_i2c_start,
-	.stop		= f1_i2c_stop,
 	.xfer		= f1_i2c_xfer,
 	.config		= f1_i2c_config,
 };

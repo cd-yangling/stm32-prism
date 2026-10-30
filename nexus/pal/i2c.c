@@ -40,31 +40,11 @@ int i2c_bus_init(const struct i2c_bus *b, const struct i2c_pins *pins)
 	return b->ops->init(b, pins);
 }
 
-struct i2c_msg
-{
-	uint8_t *buf;
-	uint16_t len;
-#define	I2C_MSG_READ			((1) << 0)
-	uint16_t flags;
-};
-
 static int i2c_xfer(const struct i2c_dev *d, const struct i2c_msg *m, int n)
 {
-	int i, ret = 0;
-
 	d->bus->ops->config(d->bus, d->spd_hz);
 
-	for (i = 0; !ret && i < n; i++)
-	{
-		d->bus->ops->start(d->bus);
-
-		ret = d->bus->ops->xfer(d->bus, d->addr7,
-				m[i].flags & I2C_MSG_READ, m[i].buf, m[i].len);
-	}
-
-	d->bus->ops->stop(d->bus);
-
-	return ret;
+	return d->bus->ops->xfer(d->bus, d->addr7, m, n);
 }
 
 int i2c_write(const struct i2c_dev *d, const uint8_t *buf, uint16_t len)
