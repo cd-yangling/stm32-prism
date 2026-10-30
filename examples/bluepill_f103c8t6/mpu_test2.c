@@ -143,6 +143,8 @@ void mpu_mf_demo2(void)
 
 	irq_mode = (0 == sensor_trigger_set(imu, &drdy_trig, drdy_isr));
 
+	uint32_t poll_deadline = 0;
+
 	for (;;)
 	{
 		if (irq_mode)
@@ -156,7 +158,10 @@ void mpu_mf_demo2(void)
 		}
 		else
 		{
-			delay_ms(cfg.dt_ms);
+			if (!tick_expired(poll_deadline))
+				continue;
+
+			poll_deadline = tick_get() + cfg.dt_ms;
 		}
 
 		if (0 != sensor_sample_fetch(imu) ||
