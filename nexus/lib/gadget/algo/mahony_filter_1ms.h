@@ -285,9 +285,9 @@ static inline __attribute__((always_inline)) void mahony_filter_update(struct ma
 	 */
 	int64_t q0 = mf->q0, q1 = mf->q1, q2 = mf->q2, q3 = mf->q3;
 
-	int32_t vx = (int32_t)((2 * (q1 * q3 - q0 * q2)) >> 46);
-	int32_t vy = (int32_t)((2 * (q0 * q1 + q2 * q3)) >> 46);
-	int32_t vz = (int32_t)((q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3) >> 46);
+	int32_t vx = (int32_t)((2 * (q0 * q2 - q1 * q3)) >> 46);
+	int32_t vy = (int32_t)((2 * (q2 * q3 - q0 * q1)) >> 46);
+	int32_t vz = (int32_t)((q1 * q1 + q2 * q2 - q0 * q0 - q3 * q3) >> 46);
 
 	/* 3. 误差向量 e = a × v (叉积, 结果为 Q28, 缩放到 Q14) */
 	int32_t ex = (int32_t)(((int64_t)ay_q14 * vz - (int64_t)az_q14 * vy) >> 14);
