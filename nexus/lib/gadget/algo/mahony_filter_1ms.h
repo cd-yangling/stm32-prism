@@ -279,14 +279,14 @@ static inline __attribute__((always_inline)) void mahony_filter_update(struct ma
 
 	/**
 	 *	2. 提取估计重力向量 v = [vx, vy, vz] (由四元数 Q30 导出 Q14 向量)
-	 *	vx = 2 * (q1*q3 - q0*q2)
-	 *	vy = 2 * (q0*q1 + q2*q3)
-	 *	vz = q0^2 - q1^2 - q2^2 + q3^2
+	 *	vx = 2 * (q0*q2 - q1*q3)
+	 *	vy = 2 * (-q0*q1 - q2*q3)
+	 *	vz = q1^2 + q2^2 - q0^2 - q3^2
 	 */
 	int64_t q0 = mf->q0, q1 = mf->q1, q2 = mf->q2, q3 = mf->q3;
 
 	int32_t vx = (int32_t)((2 * (q0 * q2 - q1 * q3)) >> 46);
-	int32_t vy = (int32_t)((2 * (q2 * q3 - q0 * q1)) >> 46);
+	int32_t vy = (int32_t)((2 * (-(q0 * q1) - q2 * q3)) >> 46);
 	int32_t vz = (int32_t)((q1 * q1 + q2 * q2 - q0 * q0 - q3 * q3) >> 46);
 
 	/* 3. 误差向量 e = a × v (叉积, 结果为 Q28, 缩放到 Q14) */
