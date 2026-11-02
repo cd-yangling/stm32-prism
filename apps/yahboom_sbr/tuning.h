@@ -38,8 +38,7 @@
 #include <stdint.h>
 
 struct balance_pd_config;
-struct velocity_pi_config;
-struct turn_pd_config;
+struct pi_ctrl_config;
 struct tty;
 
 #ifdef TUNE_LOCK
@@ -49,13 +48,14 @@ struct tty;
 #endif
 
 extern TUNE_RO struct balance_pd_config tune_bal;
-extern TUNE_RO struct velocity_pi_config tune_vel;
-extern TUNE_RO struct turn_pd_config tune_turn;
+extern TUNE_RO struct pi_ctrl_config tune_vel;
+extern TUNE_RO struct pi_ctrl_config tune_turn;
 
 void tuning_init(struct tty *t);
 void tuning_poll(void);
 uint8_t tune_run_enabled(void);
 uint8_t tune_vsw_enabled(void);
+uint8_t tune_tsw_enabled(void);
 void tune_feed(int16_t pitch_cd, int16_t out);
 
 #endif	//	__APPS_YAHBOOM_SBR_TUNING_HEADER__

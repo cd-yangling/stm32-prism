@@ -44,6 +44,9 @@
 
 #define	MT_STOP_TIMEOUT_CYC	(tick_cyc_per_us() * 100000u)
 
+#define	ENC_DIR_L	(+1)
+#define	ENC_DIR_R	(-1)
+
 //	理论上最大转速下的计数率
 //	商家给的最大 RPM 是 11000 RPM AB编码器 11 线
 #define	MT_MAX_CNT_PER_SEC	(44u * 11000u / 60u)
@@ -169,6 +172,6 @@ void mt_speed_v2(int16_t * vel_l, int16_t * vel_r)
 	cyc_r = mt_spd_r.cyc_last; cnt_r = mt_spd_r.cnt_last;
 	irq_unlock(key);
 
-	*vel_l = mt_speed_calc(&mt_spd_l, cyc_l, cnt_l);
-	*vel_r = mt_speed_calc(&mt_spd_r, cyc_r, cnt_r);
+	*vel_l = mt_speed_calc(&mt_spd_l, cyc_l, cnt_l) * ENC_DIR_L;
+	*vel_r = mt_speed_calc(&mt_spd_r, cyc_r, cnt_r) * ENC_DIR_R;
 }

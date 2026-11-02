@@ -34,46 +34,21 @@
 
 #include <stdint.h>
 #include "tuning.h"
-#include "control/algo/velocity_pi.h"
-#include "control/mt_speed.h"
+#include "control/algo/pi_ctrl.h"
 #include "control/velocity.h"
 
-#define	VELOCITY_LOOP_DIV	5u
-#define	VELOCITY_DIR_L		1
-#define	VELOCITY_DIR_R		(-1)
-
-static uint8_t	div_cnt;
 static int16_t	off_cd;
 static int16_t	vel_target;
-static struct velocity_pi_state pi_st;
+static struct pi_ctrl_state pi_st;
 
 void velocity_init(void)
 {
 	velocity_reset();
 }
 
-int16_t velocity_poll(void)
+int16_t velocity_poll(int16_t v_l, int16_t v_r)
 {
-	int16_t v_cnt;
-
-	if (++div_cnt < VELOCITY_LOOP_DIV)
-	{
-		return off_cd;
-	}
-
-	div_cnt = 0u;
-
-	{
-		int16_t v_cnt_l;
-		int16_t v_cnt_r;
-
-		mt_speed_v2(&v_cnt_l, &v_cnt_r);
-
-		v_cnt = (v_cnt_l * VELOCITY_DIR_L) +
-				(v_cnt_r * VELOCITY_DIR_R);
-	}
-
-	off_cd = velocity_pi_update(v_cnt, vel_target, &pi_st, &tune_vel);
+	off_cd = pi_ctrl_update(v_l + v_r, vel_target, &pi_st, &tune_vel);
 
 	return off_cd;
 }
@@ -81,9 +56,8 @@ int16_t velocity_poll(void)
 void velocity_reset(void)
 {
 	vel_target = 0;
-	div_cnt = 0;
 	off_cd = 0;
-	velocity_pi_reset(&pi_st);
+	pi_ctrl_reset(&pi_st);
 }
 
 void velocity_set_target(int16_t target)

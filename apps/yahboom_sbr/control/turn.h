@@ -32,28 +32,15 @@
 
 /* Copyright (C) 2026 YangLing */
 
-#ifndef	__APPS_YAHBOOM_SBR_CONTROL_ALGO_TURN_PD_HEADER__
-#define	__APPS_YAHBOOM_SBR_CONTROL_ALGO_TURN_PD_HEADER__
+#ifndef	__APPS_YAHBOOM_SBR_CONTROL_TURN_HEADER__
+#define	__APPS_YAHBOOM_SBR_CONTROL_TURN_HEADER__
 
 #include <stdint.h>
 
-struct turn_pd_config
-{
-	int16_t		kd_num;
-	uint8_t		kd_shr;
-	int16_t		target;
-	int16_t		out_max;
-};
+void turn_init(void);
+int16_t turn_poll(int16_t v_l, int16_t v_r);
+void turn_reset(void);
+void turn_set_target(int16_t target);
+int16_t turn_get_target(void);
 
-int16_t turn_pd_update(int16_t gyro_lsb, int16_t target_lsb,
-		const struct turn_pd_config *cfg);
-
-#define	TURN_PD_CONFIG_INIT			\
-{									\
-	.kd_num		= 0,				\
-	.kd_shr		= 16,				\
-	.target		= 0,				\
-	.out_max	= 1000,				\
-}
-
-#endif	//	__APPS_YAHBOOM_SBR_CONTROL_ALGO_TURN_PD_HEADER__
+#endif	//	__APPS_YAHBOOM_SBR_CONTROL_TURN_HEADER__

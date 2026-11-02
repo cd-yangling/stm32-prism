@@ -34,11 +34,11 @@
 
 #include <stdint.h>
 #include "control/algo/mul_shr.h"
-#include "control/algo/velocity_pi.h"
+#include "control/algo/pi_ctrl.h"
 
-int16_t velocity_pi_update(int16_t v_cnt, int16_t target,
-		struct velocity_pi_state *st,
-		const struct velocity_pi_config *cfg)
+int16_t pi_ctrl_update(int16_t meas, int16_t target,
+		struct pi_ctrl_state *st,
+		const struct pi_ctrl_config *cfg)
 {
 	int32_t	err;
 	int32_t	i_term;
@@ -55,9 +55,9 @@ int16_t velocity_pi_update(int16_t v_cnt, int16_t target,
 	//	 128   0.500      2         20 ms
 	//	 192   0.750      2         20 ms
 	//	 255   0.996      2         20 ms
-	st->vel_f += mul_shr(v_cnt - st->vel_f, cfg->lpf_a, 8);
+	st->meas_f += mul_shr(meas - st->meas_f, cfg->lpf_a, 8);
 
-	err = st->vel_f - target;
+	err = st->meas_f - target;
 
 	//	本次积分增量
 	i_term = mul_shr_carry(&st->ki_rem, err, cfg->ki_num, cfg->ki_shr);
@@ -68,28 +68,28 @@ int16_t velocity_pi_update(int16_t v_cnt, int16_t target,
 		+ st->integral + i_term;
 
 	//	条件积分抗饱和
-	if (-cfg->off_max <= out && out <= cfg->off_max)
+	if (-cfg->out_max <= out && out <= cfg->out_max)
 	{
 		st->integral += i_term;
 	}
 
 	//	输出限幅
-	if (out < -cfg->off_max)
+	if (out < -cfg->out_max)
 	{
-		out = -cfg->off_max;
+		out = -cfg->out_max;
 	}
 
-	if (out > cfg->off_max)
+	if (out > cfg->out_max)
 	{
-		out = cfg->off_max;
+		out = cfg->out_max;
 	}
 
 	return (int16_t)out;
 }
 
-void velocity_pi_reset(struct velocity_pi_state *st)
+void pi_ctrl_reset(struct pi_ctrl_state *st)
 {
-	st->vel_f = 0;
+	st->meas_f = 0;
 	st->integral = 0;
 	st->ki_rem = 0;
 }

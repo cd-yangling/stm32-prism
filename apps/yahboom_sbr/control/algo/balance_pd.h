@@ -64,14 +64,5 @@ int16_t balance_pd_update(int32_t err_cd, int16_t gyro_lsb, const struct balance
  * 换量程 kd_num 按满量程等比缩放(kd_num*灵敏度)
  *   250dps:1000  500dps:2000  1000dps:4000  2000dps:8000
  */
-#define	BALANCE_PD_CONFIG_INIT				\
-{											\
-	.kp_num		= 180,						\
-	.kp_shr		= 10,						\
-	.kd_num		= 1500,						\
-	.kd_shr		= 16,						\
-	.out_max	= 1000,						\
-	.out_min	= 35,						\
-}
 
 #endif	//	__APPS_YAHBOOM_SBR_CONTROL_ALGO_BALANCE_PD_HEADER__

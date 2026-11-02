@@ -33,24 +33,35 @@
 /* Copyright (C) 2026 YangLing */
 
 #include <stdint.h>
-#include "control/algo/mul_shr.h"
-#include "control/algo/turn_pd.h"
+#include "tuning.h"
+#include "control/algo/pi_ctrl.h"
+#include "control/turn.h"
 
-int16_t turn_pd_update(int16_t gyro_lsb, int16_t target_lsb,
-		const struct turn_pd_config *cfg)
+static struct pi_ctrl_state pi_st;
+static int16_t	target;
+
+void turn_init(void)
 {
-	int32_t	out;
+	turn_reset();
+}
 
-	out = mul_shr(target_lsb - gyro_lsb, cfg->kd_num, cfg->kd_shr);
+int16_t turn_poll(int16_t v_l, int16_t v_r)
+{
+	return pi_ctrl_update(v_l - v_r, target, &pi_st, &tune_turn);
+}
 
-	if (out > cfg->out_max)
-	{
-		out = cfg->out_max;
-	}
-	else if (out < -cfg->out_max)
-	{
-		out = -cfg->out_max;
-	}
+void turn_reset(void)
+{
+	target = 0;
+	pi_ctrl_reset(&pi_st);
+}
 
-	return (int16_t)out;
+void turn_set_target(int16_t t)
+{
+	target = t;
+}
+
+int16_t turn_get_target(void)
+{
+	return target;
 }

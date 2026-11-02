@@ -32,55 +32,31 @@
 
 /* Copyright (C) 2026 YangLing */
 
-#ifndef	__APPS_YAHBOOM_SBR_CONTROL_ALGO_VELOCITY_PI_HEADER__
-#define	__APPS_YAHBOOM_SBR_CONTROL_ALGO_VELOCITY_PI_HEADER__
+#ifndef	__APPS_YAHBOOM_SBR_CONTROL_ALGO_PI_CTRL_HEADER__
+#define	__APPS_YAHBOOM_SBR_CONTROL_ALGO_PI_CTRL_HEADER__
 
 #include <stdint.h>
 
-struct velocity_pi_config
+struct pi_ctrl_config
 {
 	int16_t		kp_num;
 	uint8_t		kp_shr;
 	int16_t		ki_num;
 	uint8_t		ki_shr;
 	uint16_t	lpf_a;
-	int16_t		off_max;
+	int16_t		out_max;
 };
 
-struct velocity_pi_state
+struct pi_ctrl_state
 {
-	int32_t		vel_f;
+	int32_t		meas_f;
 	int32_t		integral;
 	int32_t		ki_rem;
 };
 
-int16_t velocity_pi_update(int16_t v_cnt, int16_t target,
-		struct velocity_pi_state *st,
-		const struct velocity_pi_config *cfg);
-void velocity_pi_reset(struct velocity_pi_state *st);
+int16_t pi_ctrl_update(int16_t meas, int16_t target,
+		struct pi_ctrl_state *st,
+		const struct pi_ctrl_config *cfg);
+void pi_ctrl_reset(struct pi_ctrl_state *st);
 
-/*
- * velocity_pi_update 域与极性:
- *   v_cnt:  单位: cnt/s, 前进为正
- *   target: 同单位, 正 = 目标前进
- *   返回:   pitch 平衡点偏移(centidegree), 串级注入直立环:
- *           err_cd = pitch - (mid_cd + off), 正 = 抬头偏(减速方向)
- *
- *   P: kp_num=256, 256*err_cnt >> 8 = 1.0 cd/(cnt/s)
- *   I: ki_num=26,  26*err_cnt >> 8  = 0.10 cd/(cnt/s), @100Hz = 10 cd/s
- *
- *   lpf_a: 反馈一阶 IIR 低通, alpha = lpf_a/256, 84 -> 0.33
- *   off_max: 输出限幅(+/-off_max), 越限时冻结积分(抗饱和)
- */
-
-#define	VELOCITY_PI_CONFIG_INIT			\
-{										\
-	.kp_num		= 1500,					\
-	.kp_shr		= 12,					\
-	.ki_num		= 15,					\
-	.ki_shr		= 13,					\
-	.lpf_a		= 256,					\
-	.off_max	= 3500,					\
-}
-
-#endif	//	__APPS_YAHBOOM_SBR_CONTROL_ALGO_VELOCITY_PI_HEADER__
+#endif	//	__APPS_YAHBOOM_SBR_CONTROL_ALGO_PI_CTRL_HEADER__

@@ -38,7 +38,7 @@
 #include <stdint.h>
 
 void velocity_init(void);
-int16_t velocity_poll(void);
+int16_t velocity_poll(int16_t v_l, int16_t v_r);
 void velocity_reset(void);
 void velocity_set_target(int16_t target);
 int16_t velocity_get_target(void);

@@ -46,14 +46,44 @@
 #include "lib/gadget/split.h"
 #include "lib/gadget/fixtoa.h"
 #include "control/algo/balance_pd.h"
-#include "control/algo/velocity_pi.h"
-#include "control/algo/turn_pd.h"
+#include "control/algo/pi_ctrl.h"
 #include "control/velocity.h"
+#include "control/turn.h"
 #include "tuning.h"
 
+#define	BALANCE_PD_CONFIG_INIT		\
+{									\
+	.kp_num		= 180,				\
+	.kp_shr		= 10,				\
+	.kd_num		= 1500,				\
+	.kd_shr		= 16,				\
+	.out_max	= 1000,				\
+	.out_min	= 35,				\
+}
+
+#define	VELOCITY_PI_CONFIG_INIT		\
+{									\
+	.kp_num		= 1500,				\
+	.kp_shr		= 12,				\
+	.ki_num		= 15,				\
+	.ki_shr		= 13,				\
+	.lpf_a		= 256,				\
+	.out_max	= 3500,				\
+}
+
+#define	TURN_PI_CONFIG_INIT			\
+{									\
+	.kp_num		= 0,				\
+	.kp_shr		= 8,				\
+	.ki_num		= 0,				\
+	.ki_shr		= 8,				\
+	.lpf_a		= 256,				\
+	.out_max	= 1000,				\
+}
+
 TUNE_RO struct balance_pd_config tune_bal = BALANCE_PD_CONFIG_INIT;
-TUNE_RO struct velocity_pi_config tune_vel = VELOCITY_PI_CONFIG_INIT;
-TUNE_RO struct turn_pd_config tune_turn = TURN_PD_CONFIG_INIT;
+TUNE_RO struct pi_ctrl_config tune_vel = VELOCITY_PI_CONFIG_INIT;
+TUNE_RO struct pi_ctrl_config tune_turn = TURN_PI_CONFIG_INIT;
 
 static struct tty *bt;
 
@@ -66,6 +96,7 @@ static char bt_line[64];
 
 static uint8_t tune_run_en = 1;
 static uint8_t tune_vsw_en = 1u;
+static uint8_t tune_tsw_en = 1u;
 static uint8_t tune_up_on;
 
 static uint32_t up_next;
@@ -122,9 +153,14 @@ static void bt_put_turn(const char *tag)
 
 	bt_puts(tag);
 
-	v = ((int32_t)tune_turn.kd_num * 10000 + (1 << (tune_turn.kd_shr - 1))) >> tune_turn.kd_shr;
+	v = ((int32_t)tune_turn.kp_num * 10000 + (1 << (tune_turn.kp_shr - 1))) >> tune_turn.kp_shr;
 	fixtoa(b, sizeof(b), v, 4);
-	bt_puts(" kd=");
+	bt_puts(" kp=");
+	bt_puts(b);
+
+	v = ((int32_t)tune_turn.ki_num * 10000 + (1 << (tune_turn.ki_shr - 1))) >> tune_turn.ki_shr;
+	fixtoa(b, sizeof(b), v, 4);
+	bt_puts(" ki=");
 	bt_puts(b);
 
 	bt_puts("\r\n");
@@ -227,17 +263,30 @@ static int cmd_vki(int argc, char *argv[])
 	return cmd_set_num(v, 0, 32767, &tune_vel.ki_num, "vki");
 }
 
-static int cmd_tkd(int argc, char *argv[])
+static int cmd_tkp(int argc, char *argv[])
 {
 	int32_t v;
 
 	if (2 != argc || 0 != parse_num(argv[1], &v))
 	{
-		bt_puts("ERR usage: tkd <num>\r\n");
+		bt_puts("ERR usage: tkp <num>\r\n");
 		return -EINVAL;
 	}
 
-	return cmd_set_num(v, 0, 32767, &tune_turn.kd_num, "tkd");
+	return cmd_set_num(v, 0, 32767, &tune_turn.kp_num, "tkp");
+}
+
+static int cmd_tki(int argc, char *argv[])
+{
+	int32_t v;
+
+	if (2 != argc || 0 != parse_num(argv[1], &v))
+	{
+		bt_puts("ERR usage: tki <num>\r\n");
+		return -EINVAL;
+	}
+
+	return cmd_set_num(v, 0, 32767, &tune_turn.ki_num, "tki");
 }
 
 static int cmd_lpfa(int argc, char *argv[])
@@ -258,6 +307,28 @@ static int cmd_lpfa(int argc, char *argv[])
 
 	tune_vel.lpf_a = (uint16_t)v;
 	put_ok("lpfa", v);
+
+	return 0;
+}
+
+static int cmd_tlpfa(int argc, char *argv[])
+{
+	int32_t v;
+
+	if (2 != argc || 0 != parse_num(argv[1], &v))
+	{
+		bt_puts("ERR usage: tlpfa <num>\r\n");
+		return -EINVAL;
+	}
+
+	if (0 > v || 256 < v)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	tune_turn.lpf_a = (uint16_t)v;
+	put_ok("tlpfa", v);
 
 	return 0;
 }
@@ -361,6 +432,21 @@ static int cmd_vsw(int argc, char *argv[])
 	return 0;
 }
 
+static int cmd_tsw(int argc, char *argv[])
+{
+	if (2 != argc || ('0' != argv[1][0] && '1' != argv[1][0])
+			|| '\0' != argv[1][1])
+	{
+		bt_puts("ERR usage: tsw <0|1>\r\n");
+		return -EINVAL;
+	}
+
+	tune_tsw_en = (uint8_t)(argv[1][0] - '0');
+	bt_puts(tune_tsw_en ? "OK tsw=1\r\n" : "OK tsw=0\r\n");
+
+	return 0;
+}
+
 static int cmd_vt(int argc, char *argv[])
 {
 	char *end;
@@ -383,6 +469,35 @@ static int cmd_vt(int argc, char *argv[])
 
 	velocity_set_target((int16_t)v);
 	bt_puts("OK vt=");
+	snprintf(b, sizeof(b), "%d", (int)v);
+	bt_puts(b);
+	bt_puts("\r\n");
+
+	return 0;
+}
+
+static int cmd_tt(int argc, char *argv[])
+{
+	char *end;
+	char b[16];
+	long v;
+
+	if (2 != argc)
+	{
+		bt_puts("ERR usage: tt <cnt> -8000..8000\r\n");
+		return -EINVAL;
+	}
+
+	v = strtol(argv[1], &end, 10);
+
+	if (end == argv[1] || '\0' != *end || -8000 > v || 8000 < v)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	turn_set_target((int16_t)v);
+	bt_puts("OK tt=");
 	snprintf(b, sizeof(b), "%d", (int)v);
 	bt_puts(b);
 	bt_puts("\r\n");
@@ -435,19 +550,25 @@ static int cmd_dump(int argc, char *argv[])
 	bt_puts(" lpf_a=");
 	snprintf(b, sizeof(b), "%u", tune_vel.lpf_a);
 	bt_puts(b);
-	bt_puts(" off_max=");
-	snprintf(b, sizeof(b), "%d", tune_vel.off_max);
+	bt_puts(" out_max=");
+	snprintf(b, sizeof(b), "%d", tune_vel.out_max);
 	bt_puts(b);
 	bt_puts("\r\n");
 
-	bt_puts("turn kd_num=");
-	snprintf(b, sizeof(b), "%d", tune_turn.kd_num);
+	bt_puts("turn kp_num=");
+	snprintf(b, sizeof(b), "%d", tune_turn.kp_num);
 	bt_puts(b);
-	bt_puts(" kd_shr=");
-	snprintf(b, sizeof(b), "%u", tune_turn.kd_shr);
+	bt_puts(" kp_shr=");
+	snprintf(b, sizeof(b), "%u", tune_turn.kp_shr);
 	bt_puts(b);
-	bt_puts(" target=");
-	snprintf(b, sizeof(b), "%d", tune_turn.target);
+	bt_puts(" ki_num=");
+	snprintf(b, sizeof(b), "%d", tune_turn.ki_num);
+	bt_puts(b);
+	bt_puts(" ki_shr=");
+	snprintf(b, sizeof(b), "%u", tune_turn.ki_shr);
+	bt_puts(b);
+	bt_puts(" lpf_a=");
+	snprintf(b, sizeof(b), "%u", tune_turn.lpf_a);
 	bt_puts(b);
 	bt_puts(" out_max=");
 	snprintf(b, sizeof(b), "%d", tune_turn.out_max);
@@ -475,6 +596,12 @@ static int cmd_stat(int argc, char *argv[])
 	bt_puts(b);
 	bt_puts(" vt=");
 	snprintf(b, sizeof(b), "%d", velocity_get_target());
+	bt_puts(b);
+	bt_puts(" tsw=");
+	snprintf(b, sizeof(b), "%u", tune_tsw_en);
+	bt_puts(b);
+	bt_puts(" ts=");
+	snprintf(b, sizeof(b), "%d", turn_get_target());
 	bt_puts(b);
 #if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
 	bt_puts(" rdrop=");
@@ -504,8 +631,10 @@ static const struct tune_cmd tune_cmds[] =
 	{ "bkd",	cmd_bkd,	"balance kd <num>" },
 	{ "vkp",	cmd_vkp,	"velocity kp <num>" },
 	{ "vki",	cmd_vki,	"velocity ki <num>" },
-	{ "tkd",	cmd_tkd,	"turn kd <num>" },
+	{ "tkp",	cmd_tkp,	"turn kp <num>" },
+	{ "tki",	cmd_tki,	"turn ki <num>" },
 	{ "lpfa",	cmd_lpfa,	"velocity lpf a <num> 0..256" },
+	{ "tlpfa",	cmd_tlpfa,	"turn lpf a <num> 0..256" },
 	{ "omax",	cmd_omax,	"balance out limit <num> 1..1000" },
 	{ "omin",	cmd_omin,	"balance out mute <num> 0=off" },
 #endif
@@ -514,6 +643,8 @@ static const struct tune_cmd tune_cmds[] =
 	{ "stop",	cmd_stop,	"motors off (default)" },
 	{ "vsw",	cmd_vsw,	"velocity loop 0|1" },
 	{ "vt",		cmd_vt,		"velocity target <cnt> -8000..8000" },
+	{ "tsw",	cmd_tsw,	"turn loop 0|1" },
+	{ "tt",		cmd_tt,		"turn target <cnt> -8000..8000" },
 	{ "up",		cmd_up,		"telemetry 0|1" },
 };
 
@@ -583,6 +714,11 @@ void tuning_poll(void)
 uint8_t tune_run_enabled(void)
 {
 	return tune_run_en;
+}
+
+uint8_t tune_tsw_enabled(void)
+{
+	return tune_tsw_en;
 }
 
 uint8_t tune_vsw_enabled(void)

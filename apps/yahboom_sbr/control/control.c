@@ -40,7 +40,7 @@
 #include "tuning.h"
 #include "lib/gadget/algo/comp_filter_10us.h"
 #include "control/algo/balance_pd.h"
-#include "control/algo/turn_pd.h"
+#include "control/turn.h"
 #include "control/mt_speed.h"
 #include "control/velocity.h"
 #include "control/imu.h"
@@ -61,6 +61,12 @@ static const struct control_posture
 static struct cf_angles angles;
 
 static uint8_t fallen;
+
+#define	CONTROL_LOOP_DIV	5u
+
+static uint8_t	div_cnt;
+static int16_t	vel_off;
+static int16_t	turn_out;
 
 static void motors_write(int16_t l, int16_t r)
 {
@@ -115,6 +121,7 @@ void control_init(void)
 	}
 
 	velocity_init();
+	turn_init();
 	imu_init();
 }
 
@@ -123,8 +130,6 @@ void control_poll(void)
 	uint16_t dt_10us;
 	struct imu_raw_sample raw;
 	int16_t out;
-	int16_t vel_off;
-	int16_t turn;
 
 	//	采样到点返回 1 并输出真实 dt(10us); 未到点返回 0, 不修改 *dt_10us
 	if (!imu_sample_due(&dt_10us))
@@ -138,26 +143,48 @@ void control_poll(void)
 	{
 		motors_write(0, 0);
 		velocity_reset();
+		turn_reset();
 		return;
 	}
 
-	//	直立环+速度环 总开关
+	//	直立环+速度环+转向环 总开关
 	if (0u == tune_run_enabled())
 	{
 		motors_write(0, 0);
 		velocity_reset();
+		turn_reset();
 		return;
 	}
 
-	//	速度环开关
-	if (0u != tune_vsw_enabled())
+	if (++div_cnt >= CONTROL_LOOP_DIV)
 	{
-		vel_off = velocity_poll();	//	速度环更新
-	}
-	else
-	{
-		vel_off = 0;
-		velocity_reset();
+		int16_t	v_l;
+		int16_t	v_r;
+
+		div_cnt = 0u;
+		mt_speed_v2(&v_l, &v_r);
+
+		//	速度环开关
+		if (0u != tune_vsw_enabled())
+		{
+			vel_off = velocity_poll(v_l, v_r);
+		}
+		else
+		{
+			vel_off = 0;
+			velocity_reset();
+		}
+
+		//	转向环开关
+		if (0u != tune_tsw_enabled())
+		{
+			turn_out = turn_poll(v_l, v_r);
+		}
+		else
+		{
+			turn_out = 0;
+			turn_reset();
+		}
 	}
 
 	//	直立环更新
@@ -176,9 +203,7 @@ void control_poll(void)
 		}
 	}
 
-	turn = turn_pd_update(raw.gz, tune_turn.target, &tune_turn);
-
-	motors_write(out + turn, out - turn);
+	motors_write(out - turn_out, out + turn_out);
 
 //	tune_feed(angles.pitch, out);
 }
