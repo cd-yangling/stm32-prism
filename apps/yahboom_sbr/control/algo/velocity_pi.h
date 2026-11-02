@@ -75,12 +75,12 @@ void velocity_pi_reset(struct velocity_pi_state *st);
 
 #define	VELOCITY_PI_CONFIG_INIT			\
 {										\
-	.kp_num		= 0,					\
+	.kp_num		= 1500,					\
 	.kp_shr		= 12,					\
-	.ki_num		= 0,					\
-	.ki_shr		= 15,					\
-	.lpf_a		= 84,					\
-	.off_max	= 1000,					\
+	.ki_num		= 15,					\
+	.ki_shr		= 13,					\
+	.lpf_a		= 256,					\
+	.off_max	= 3500,					\
 }
 
 #endif	//	__APPS_YAHBOOM_SBR_CONTROL_ALGO_VELOCITY_PI_HEADER__

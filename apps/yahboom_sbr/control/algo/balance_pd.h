@@ -66,12 +66,12 @@ int16_t balance_pd_update(int32_t err_cd, int16_t gyro_lsb, const struct balance
  */
 #define	BALANCE_PD_CONFIG_INIT				\
 {											\
-	.kp_num		= 0,						\
+	.kp_num		= 180,						\
 	.kp_shr		= 10,						\
-	.kd_num		= 0,						\
+	.kd_num		= 1500,						\
 	.kd_shr		= 16,						\
 	.out_max	= 1000,						\
-	.out_min	= 15,						\
+	.out_min	= 35,						\
 }
 
 #endif	//	__APPS_YAHBOOM_SBR_CONTROL_ALGO_BALANCE_PD_HEADER__

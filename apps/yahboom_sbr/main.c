@@ -179,7 +179,7 @@ int main(void)
 	sonar_init();
 #endif
 
-	debug_entry();
+//	debug_entry();
 
 	start_gate_wait();
 
