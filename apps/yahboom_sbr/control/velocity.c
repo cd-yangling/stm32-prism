@@ -37,9 +37,8 @@
 #include "control/algo/pi_ctrl.h"
 #include "control/velocity.h"
 
-static int16_t	off_cd;
-static int16_t	vel_target;
 static struct pi_ctrl_state pi_st;
+static int16_t	target;
 
 void velocity_init(void)
 {
@@ -48,24 +47,21 @@ void velocity_init(void)
 
 int16_t velocity_poll(int16_t v_l, int16_t v_r)
 {
-	off_cd = pi_ctrl_update(v_l + v_r, vel_target, &pi_st, &tune_vel);
-
-	return off_cd;
+	return pi_ctrl_update(v_l + v_r, target, &pi_st, &tune_vel);
 }
 
 void velocity_reset(void)
 {
-	vel_target = 0;
-	off_cd = 0;
+	target = 0;
 	pi_ctrl_reset(&pi_st);
 }
 
-void velocity_set_target(int16_t target)
+void velocity_set_target(int16_t tgt)
 {
-	vel_target = target;
+	target = tgt;
 }
 
 int16_t velocity_get_target(void)
 {
-	return vel_target;
+	return target;
 }

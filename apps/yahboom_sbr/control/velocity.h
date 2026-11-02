@@ -40,7 +40,7 @@
 void velocity_init(void);
 int16_t velocity_poll(int16_t v_l, int16_t v_r);
 void velocity_reset(void);
-void velocity_set_target(int16_t target);
+void velocity_set_target(int16_t tgt);
 int16_t velocity_get_target(void);
 
 #endif	//	__APPS_YAHBOOM_SBR_CONTROL_VELOCITY_HEADER__
