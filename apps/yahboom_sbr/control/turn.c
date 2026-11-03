@@ -56,9 +56,9 @@ void turn_reset(void)
 	pi_ctrl_reset(&pi_st);
 }
 
-void turn_set_target(int16_t t)
+void turn_set_target(int16_t tgt)
 {
-	target = t;
+	target = tgt;
 }
 
 int16_t turn_get_target(void)

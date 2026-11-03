@@ -34,6 +34,7 @@ PROJ_SRC  += control/algo/pi_ctrl.c
 PROJ_SRC  += control/turn.c
 PROJ_SRC  += control/imu.c
 PROJ_SRC  += tuning.c
+PROJ_SRC  += telemetry.c
 PROJ_SRC  += tools/debug_entry.c
 PROJ_SRC  += tools/debug_misc.c
 PROJ_SRC  += tools/debug_mpu6050.c

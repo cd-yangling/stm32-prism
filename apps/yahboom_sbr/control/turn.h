@@ -40,7 +40,7 @@
 void turn_init(void);
 int16_t turn_poll(int16_t v_l, int16_t v_r);
 void turn_reset(void);
-void turn_set_target(int16_t target);
+void turn_set_target(int16_t tgt);
 int16_t turn_get_target(void);
 
 #endif	//	__APPS_YAHBOOM_SBR_CONTROL_TURN_HEADER__

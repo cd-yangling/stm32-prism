@@ -56,6 +56,5 @@ void tuning_poll(void);
 uint8_t tune_run_enabled(void);
 uint8_t tune_vsw_enabled(void);
 uint8_t tune_tsw_enabled(void);
-void tune_feed(int16_t pitch_cd, int16_t out);
 
 #endif	//	__APPS_YAHBOOM_SBR_TUNING_HEADER__

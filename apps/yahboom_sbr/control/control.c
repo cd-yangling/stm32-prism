@@ -44,6 +44,7 @@
 #include "control/mt_speed.h"
 #include "control/velocity.h"
 #include "control/imu.h"
+#include "telemetry.h"
 #include "control/control.h"
 
 static const struct control_posture
@@ -129,7 +130,8 @@ void control_poll(void)
 {
 	uint16_t dt_10us;
 	struct imu_raw_sample raw;
-	int16_t out;
+	int16_t bal_out;
+	int32_t err_cd;
 
 	//	采样到点返回 1 并输出真实 dt(10us); 未到点返回 0, 不修改 *dt_10us
 	if (!imu_sample_due(&dt_10us))
@@ -138,12 +140,17 @@ void control_poll(void)
 	//	姿态更新
 	attitude_update(&raw, dt_10us);
 
+	telemetry_feed(TELE_CH_PITCH, (int16_t)angles.pitch);
+	telemetry_feed(TELE_CH_GY, raw.gy);
+
 	//	跌倒保护与恢复判断
 	if (fall_guard())
 	{
 		motors_write(0, 0);
 		velocity_reset();
 		turn_reset();
+		telemetry_reset();
+		telemetry_poll();
 		return;
 	}
 
@@ -153,6 +160,8 @@ void control_poll(void)
 		motors_write(0, 0);
 		velocity_reset();
 		turn_reset();
+		telemetry_reset();
+		telemetry_poll();
 		return;
 	}
 
@@ -163,6 +172,13 @@ void control_poll(void)
 
 		div_cnt = 0u;
 		mt_speed_v2(&v_l, &v_r);
+
+		telemetry_feed(TELE_CH_VL, v_l);
+		telemetry_feed(TELE_CH_VR, v_r);
+		telemetry_feed(TELE_CH_VSUM, (int16_t)(v_l + v_r));
+		telemetry_feed(TELE_CH_VDIF, (int16_t)(v_l - v_r));
+		telemetry_feed(TELE_CH_VT, velocity_get_target());
+		telemetry_feed(TELE_CH_TT, turn_get_target());
 
 		//	速度环开关
 		if (0u != tune_vsw_enabled())
@@ -175,6 +191,8 @@ void control_poll(void)
 			velocity_reset();
 		}
 
+		telemetry_feed(TELE_CH_VOFF, vel_off);
+
 		//	转向环开关
 		if (0u != tune_tsw_enabled())
 		{
@@ -185,25 +203,31 @@ void control_poll(void)
 			turn_out = 0;
 			turn_reset();
 		}
+
+		telemetry_feed(TELE_CH_TOUT, turn_out);
 	}
 
 	//	直立环更新
-	out = balance_pd_update(
-			angles.pitch - (posture.mid_cd + vel_off), raw.gy,
-			&tune_bal);
+	err_cd = angles.pitch - (posture.mid_cd + vel_off);
+	bal_out = balance_pd_update(err_cd, raw.gy, &tune_bal);
+
+	telemetry_feed(TELE_CH_PERR, (int16_t)err_cd);
+	telemetry_feed(TELE_CH_BOUT, bal_out);
+	telemetry_feed(TELE_CH_LPWR, (int16_t)(bal_out - turn_out));
+	telemetry_feed(TELE_CH_RPWR, (int16_t)(bal_out + turn_out));
 
 	{
-		if (0 < out)
+		if (0 < bal_out)
 		{
 			led_on(board.led1);
 		}
-		else if (0 > out)
+		else if (0 > bal_out)
 		{
 			led_off(board.led1);
 		}
 	}
 
-	motors_write(out - turn_out, out + turn_out);
+	motors_write(bal_out - turn_out, bal_out + turn_out);
 
-//	tune_feed(angles.pitch, out);
+	telemetry_poll();
 }

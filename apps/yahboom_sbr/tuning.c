@@ -49,6 +49,7 @@
 #include "control/algo/pi_ctrl.h"
 #include "control/velocity.h"
 #include "control/turn.h"
+#include "telemetry.h"
 #include "tuning.h"
 
 #define	BALANCE_PD_CONFIG_INIT		\
@@ -74,9 +75,9 @@
 #define	TURN_PI_CONFIG_INIT			\
 {									\
 	.kp_num		= 0,				\
-	.kp_shr		= 8,				\
+	.kp_shr		= 12,				\
 	.ki_num		= 0,				\
-	.ki_shr		= 8,				\
+	.ki_shr		= 13,				\
 	.lpf_a		= 256,				\
 	.out_max	= 1000,				\
 }
@@ -97,11 +98,6 @@ static char bt_line[64];
 static uint8_t tune_run_en = 1;
 static uint8_t tune_vsw_en = 1u;
 static uint8_t tune_tsw_en = 1u;
-static uint8_t tune_up_on;
-
-static uint32_t up_next;
-static int16_t last_pitch;
-static int16_t last_out;
 
 static int cmd_help(int argc, char *argv[]);
 static int cmd_dump(int argc, char *argv[]);
@@ -167,18 +163,6 @@ static void bt_put_turn(const char *tag)
 }
 
 #ifndef TUNE_LOCK
-static void put_ok(const char *tag, int32_t v)
-{
-	char b[16];
-
-	bt_puts("OK ");
-	bt_puts(tag);
-	bt_puts("=");
-	snprintf(b, sizeof(b), "%d", (int)v);
-	bt_puts(b);
-	bt_puts("\r\n");
-}
-
 static int parse_num(const char *s, int32_t *out)
 {
 	char *end;
@@ -196,8 +180,7 @@ static int parse_num(const char *s, int32_t *out)
 	return 0;
 }
 
-static int cmd_set_num(int32_t v, int32_t lo, int32_t hi, int16_t *num,
-		const char *tag)
+static int cmd_set_num(int32_t v, int32_t lo, int32_t hi, int16_t *num)
 {
 	if (lo > v || hi < v)
 	{
@@ -206,7 +189,6 @@ static int cmd_set_num(int32_t v, int32_t lo, int32_t hi, int16_t *num,
 	}
 
 	*num = (int16_t)v;
-	put_ok(tag, v);
 
 	return 0;
 }
@@ -221,7 +203,7 @@ static int cmd_bkp(int argc, char *argv[])
 		return -EINVAL;
 	}
 
-	return cmd_set_num(v, 0, 32767, &tune_bal.kp_num, "bkp");
+	return cmd_set_num(v, 0, 32767, &tune_bal.kp_num);
 }
 
 static int cmd_bkd(int argc, char *argv[])
@@ -234,7 +216,7 @@ static int cmd_bkd(int argc, char *argv[])
 		return -EINVAL;
 	}
 
-	return cmd_set_num(v, 0, 32767, &tune_bal.kd_num, "bkd");
+	return cmd_set_num(v, 0, 32767, &tune_bal.kd_num);
 }
 
 static int cmd_vkp(int argc, char *argv[])
@@ -247,7 +229,7 @@ static int cmd_vkp(int argc, char *argv[])
 		return -EINVAL;
 	}
 
-	return cmd_set_num(v, 0, 32767, &tune_vel.kp_num, "vkp");
+	return cmd_set_num(v, 0, 32767, &tune_vel.kp_num);
 }
 
 static int cmd_vki(int argc, char *argv[])
@@ -260,7 +242,7 @@ static int cmd_vki(int argc, char *argv[])
 		return -EINVAL;
 	}
 
-	return cmd_set_num(v, 0, 32767, &tune_vel.ki_num, "vki");
+	return cmd_set_num(v, 0, 32767, &tune_vel.ki_num);
 }
 
 static int cmd_tkp(int argc, char *argv[])
@@ -273,7 +255,7 @@ static int cmd_tkp(int argc, char *argv[])
 		return -EINVAL;
 	}
 
-	return cmd_set_num(v, 0, 32767, &tune_turn.kp_num, "tkp");
+	return cmd_set_num(v, 0, 32767, &tune_turn.kp_num);
 }
 
 static int cmd_tki(int argc, char *argv[])
@@ -286,7 +268,7 @@ static int cmd_tki(int argc, char *argv[])
 		return -EINVAL;
 	}
 
-	return cmd_set_num(v, 0, 32767, &tune_turn.ki_num, "tki");
+	return cmd_set_num(v, 0, 32767, &tune_turn.ki_num);
 }
 
 static int cmd_lpfa(int argc, char *argv[])
@@ -306,8 +288,6 @@ static int cmd_lpfa(int argc, char *argv[])
 	}
 
 	tune_vel.lpf_a = (uint16_t)v;
-	put_ok("lpfa", v);
-
 	return 0;
 }
 
@@ -328,8 +308,6 @@ static int cmd_tlpfa(int argc, char *argv[])
 	}
 
 	tune_turn.lpf_a = (uint16_t)v;
-	put_ok("tlpfa", v);
-
 	return 0;
 }
 
@@ -350,8 +328,6 @@ static int cmd_omax(int argc, char *argv[])
 	}
 
 	tune_bal.out_max = (int16_t)v;
-	put_ok("omax", v);
-
 	return 0;
 }
 
@@ -372,8 +348,6 @@ static int cmd_omin(int argc, char *argv[])
 	}
 
 	tune_bal.out_min = (int16_t)v;
-	put_ok("omin", v);
-
 	return 0;
 }
 #endif
@@ -411,8 +385,41 @@ static int cmd_up(int argc, char *argv[])
 		return -EINVAL;
 	}
 
-	tune_up_on = (uint8_t)(argv[1][0] - '0');
-	bt_puts(tune_up_on ? "OK up=1\r\n" : "OK up=0\r\n");
+	telemetry_set_up((uint8_t)(argv[1][0] - '0'));
+	bt_puts(telemetry_get_up() ? "OK up=1\r\n" : "OK up=0\r\n");
+
+	return 0;
+}
+
+static int cmd_tmask(int argc, char *argv[])
+{
+	char	*end;
+	char	b[20];
+	unsigned long	v;
+
+	if (2 != argc)
+	{
+		bt_puts("ERR usage: tmask <hex>\r\n");
+		return -EINVAL;
+	}
+
+	v = strtoul(argv[1], &end, 16);
+
+	if (end == argv[1] || '\0' != *end)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	if (0 != telemetry_set_mask((uint32_t)v))
+	{
+		bt_puts("ERR tmask\r\n");
+		return -EINVAL;
+	}
+
+	snprintf(b, sizeof(b), "OK tmask=0x%x\r\n",
+			(unsigned)telemetry_get_mask());
+	bt_puts(b);
 
 	return 0;
 }
@@ -450,7 +457,6 @@ static int cmd_tsw(int argc, char *argv[])
 static int cmd_vt(int argc, char *argv[])
 {
 	char *end;
-	char b[16];
 	long v;
 
 	if (2 != argc)
@@ -468,10 +474,6 @@ static int cmd_vt(int argc, char *argv[])
 	}
 
 	velocity_set_target((int16_t)v);
-	bt_puts("OK vt=");
-	snprintf(b, sizeof(b), "%d", (int)v);
-	bt_puts(b);
-	bt_puts("\r\n");
 
 	return 0;
 }
@@ -479,7 +481,6 @@ static int cmd_vt(int argc, char *argv[])
 static int cmd_tt(int argc, char *argv[])
 {
 	char *end;
-	char b[16];
 	long v;
 
 	if (2 != argc)
@@ -497,10 +498,6 @@ static int cmd_tt(int argc, char *argv[])
 	}
 
 	turn_set_target((int16_t)v);
-	bt_puts("OK tt=");
-	snprintf(b, sizeof(b), "%d", (int)v);
-	bt_puts(b);
-	bt_puts("\r\n");
 
 	return 0;
 }
@@ -589,7 +586,7 @@ static int cmd_stat(int argc, char *argv[])
 	snprintf(b, sizeof(b), "%u", tune_run_en);
 	bt_puts(b);
 	bt_puts(" up=");
-	snprintf(b, sizeof(b), "%u", tune_up_on);
+	snprintf(b, sizeof(b), "%u", telemetry_get_up());
 	bt_puts(b);
 	bt_puts(" vsw=");
 	snprintf(b, sizeof(b), "%u", tune_vsw_en);
@@ -611,6 +608,9 @@ static int cmd_stat(int argc, char *argv[])
 	snprintf(b, sizeof(b), "%u", (unsigned)tty_tx_drop(bt));
 	bt_puts(b);
 #endif
+	bt_puts(" mask=0x");
+	snprintf(b, sizeof(b), "%x", (unsigned)telemetry_get_mask());
+	bt_puts(b);
 	bt_puts("\r\n");
 
 	return 0;
@@ -646,6 +646,7 @@ static const struct tune_cmd tune_cmds[] =
 	{ "tsw",	cmd_tsw,	"turn loop 0|1" },
 	{ "tt",		cmd_tt,		"turn target <cnt> -8000..8000" },
 	{ "up",		cmd_up,		"telemetry 0|1" },
+	{ "tmask",	cmd_tmask,	"telemetry channel mask <hex> 4 bits max" },
 };
 
 static int cmd_help(int argc, char *argv[])
@@ -669,6 +670,7 @@ static int cmd_help(int argc, char *argv[])
 void tuning_init(struct tty *t)
 {
 	bt = t;
+	telemetry_init(t);
 	tty_lflag_clr(t, TTY_LFLAG_ECHO);
 	bt_puts("tuning ready\r\n");
 }
@@ -724,32 +726,4 @@ uint8_t tune_tsw_enabled(void)
 uint8_t tune_vsw_enabled(void)
 {
 	return tune_vsw_en;
-}
-
-void tune_feed(int16_t pitch_cd, int16_t out)
-{
-	char b[24];
-
-	last_pitch = pitch_cd;
-	last_out = out;
-
-	if (0 == tune_up_on)
-	{
-		return;
-	}
-
-	if (0 == up_next)
-	{
-		up_next = tick_get() + 50u;
-		return;
-	}
-
-	if (0 == tick_expired(up_next))
-	{
-		return;
-	}
-
-	up_next = tick_get() + 50u;
-	snprintf(b, sizeof(b), "%d,%d\n", (int)last_pitch, (int)last_out);
-	(void)tty_write(bt, b, (unsigned int)strlen(b));
 }
