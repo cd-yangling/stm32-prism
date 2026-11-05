@@ -50,6 +50,7 @@
 #include "control/velocity.h"
 #include "control/turn.h"
 #include "telemetry.h"
+#include "tasks/battery.h"
 #include "tuning.h"
 
 #define	BALANCE_PD_CONFIG_INIT		\
@@ -616,6 +617,20 @@ static int cmd_stat(int argc, char *argv[])
 	return 0;
 }
 
+static int cmd_vbat(int argc, char *argv[])
+{
+	char b[16];
+
+	(void)argc;
+	(void)argv;
+	fixtoa(b, sizeof(b), (int32_t)battery_get_mv(), 3);
+	bt_puts("vbat=");
+	bt_puts(b);
+	bt_puts(" V\r\n");
+
+	return 0;
+}
+
 struct tune_cmd
 {
 	const char	*name;
@@ -639,6 +654,7 @@ static const struct tune_cmd tune_cmds[] =
 	{ "omin",	cmd_omin,	"balance out mute <num> 0=off" },
 #endif
 	{ "stat",	cmd_stat,	"params + channel status" },
+	{ "vbat",	cmd_vbat,	"battery voltage" },
 	{ "run",	cmd_run,	"enable motors" },
 	{ "stop",	cmd_stop,	"motors off (default)" },
 	{ "vsw",	cmd_vsw,	"velocity loop 0|1" },

@@ -80,6 +80,7 @@ static uint32_t deadline;
 static uint32_t sum_mv;
 static uint8_t n_try;
 static uint8_t n_ok;
+static uint32_t last_mv;
 
 static void group_clear(void)
 {
@@ -131,17 +132,22 @@ void battery_poll(void)
 		{
 			app_die();
 		}
-		else if (sum_mv / n_ok < BAT_VBAT_LOW_MV)
-		{
-			motor_output_enable(0u);
-			st = BAT_BEEP_ON;
-			deadline = tick_get();
-		}
 		else
 		{
-			motor_output_enable(1u);
-			st = BAT_SLEEP;
-			deadline = tick_get() + BAT_SLEEP_MS;
+			last_mv = sum_mv / n_ok;
+
+			if (last_mv < BAT_VBAT_LOW_MV)
+			{
+				motor_output_enable(0u);
+				st = BAT_BEEP_ON;
+				deadline = tick_get();
+			}
+			else
+			{
+				motor_output_enable(1u);
+				st = BAT_SLEEP;
+				deadline = tick_get() + BAT_SLEEP_MS;
+			}
 		}
 		break;
 
@@ -163,4 +169,9 @@ void battery_poll(void)
 		deadline = tick_get() + BAT_PAUSE_MS;
 		break;
 	}
+}
+
+uint32_t battery_get_mv(void)
+{
+	return last_mv;
 }

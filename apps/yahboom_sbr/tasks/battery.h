@@ -35,9 +35,13 @@
 #ifndef	__APPS_YAHBOOM_SBR_TASKS_BATTERY_HEADER__
 #define	__APPS_YAHBOOM_SBR_TASKS_BATTERY_HEADER__
 
+#include <stdint.h>
+
 void battery_init(void);
 
 void battery_poll(void);
+
+uint32_t battery_get_mv(void);
 
 #endif	//	__APPS_YAHBOOM_SBR_TASKS_BATTERY_HEADER__
 
