@@ -87,12 +87,12 @@ make vimdb        # 生成 tags + cscope
 
 已支持开发板：
 
-| BOARD | 芯片 |
-|---|---|
-| `bluepill_f103c8t6` | STM32F103C8T6 |
-| `embedfire_zhinanzhe` | STM32F103 |
-| `embedfire_h7pro` | STM32H7xx |
-| `yahboom_sbr` | STM32F103 |
+| BOARD | 芯片 | 厂商 |
+|---|---|---|
+| `bluepill_f103c8t6` | STM32F103C8T6 | 最小系统板(蓝板) |
+| `embedfire_zhinanzhe` | STM32F103VET6 | 野火指南者开发板 |
+| `embedfire_h7pro` | STM32H7xx | 野火 STM32H750XB_H743XI Pro |
+| `yahboom_sbr` | STM32F103RCT6 | 亚博智能平衡小车 |
 
 ---
 
