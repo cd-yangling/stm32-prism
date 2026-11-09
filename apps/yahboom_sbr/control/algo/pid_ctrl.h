@@ -32,31 +32,40 @@
 
 /* Copyright (C) 2026 YangLing */
 
-#ifndef	__APPS_YAHBOOM_SBR_CONTROL_ALGO_PI_CTRL_HEADER__
-#define	__APPS_YAHBOOM_SBR_CONTROL_ALGO_PI_CTRL_HEADER__
+#ifndef	__APPS_YAHBOOM_SBR_CONTROL_ALGO_PID_CTRL_HEADER__
+#define	__APPS_YAHBOOM_SBR_CONTROL_ALGO_PID_CTRL_HEADER__
 
 #include <stdint.h>
 
-struct pi_ctrl_config
+struct pid_ctrl_config
 {
 	int16_t		kp_num;
 	uint8_t		kp_shr;
 	int16_t		ki_num;
 	uint8_t		ki_shr;
+	int16_t		kd_num;
+	uint8_t		kd_shr;
 	uint16_t	lpf_a;
 	int16_t		out_max;
 };
 
-struct pi_ctrl_state
+struct pid_ctrl_state
 {
 	int32_t		meas_f;
-	int32_t		integral;
-	int32_t		ki_rem;
+	int32_t		meas_f_rem;
+	int32_t		i_sum;
+	int32_t		i_rem;
+	int32_t		d_f;
+	int32_t		d_f_rem;
+	int32_t		d_e1;
+	int32_t		d_e2;
+	int16_t		d_prev;
+	uint8_t		d_init;
 };
 
-int16_t pi_ctrl_update(int16_t meas, int16_t target,
-		struct pi_ctrl_state *st,
-		const struct pi_ctrl_config *cfg);
-void pi_ctrl_reset(struct pi_ctrl_state *st);
+int16_t pid_ctrl_update(int16_t meas, int16_t target,
+		struct pid_ctrl_state *pcs,
+		const struct pid_ctrl_config *cfg);
+void pid_ctrl_reset(struct pid_ctrl_state *pcs);
 
-#endif	//	__APPS_YAHBOOM_SBR_CONTROL_ALGO_PI_CTRL_HEADER__
+#endif	//	__APPS_YAHBOOM_SBR_CONTROL_ALGO_PID_CTRL_HEADER__

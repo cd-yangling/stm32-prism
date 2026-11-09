@@ -46,7 +46,7 @@
 #include "lib/gadget/split.h"
 #include "lib/gadget/fixtoa.h"
 #include "control/algo/balance_pd.h"
-#include "control/algo/pi_ctrl.h"
+#include "control/algo/pid_ctrl.h"
 #include "control/velocity.h"
 #include "control/turn.h"
 #include "telemetry.h"
@@ -55,37 +55,41 @@
 
 #define	BALANCE_PD_CONFIG_INIT		\
 {									\
-	.kp_num		= 180,				\
+	.kp_num		= 220,				\
 	.kp_shr		= 10,				\
-	.kd_num		= 1500,				\
+	.kd_num		= 2800,				\
 	.kd_shr		= 16,				\
 	.out_max	= 1000,				\
 	.out_min	= 35,				\
 }
 
-#define	VELOCITY_PI_CONFIG_INIT		\
+#define	VELOCITY_PID_CONFIG_INIT		\
 {									\
 	.kp_num		= 1500,				\
 	.kp_shr		= 12,				\
-	.ki_num		= 15,				\
+	.ki_num		= 4,				\
 	.ki_shr		= 13,				\
+	.kd_num		= 1200,				\
+	.kd_shr		= 10,				\
 	.lpf_a		= 256,				\
 	.out_max	= 3500,				\
 }
 
-#define	TURN_PI_CONFIG_INIT			\
+#define	TURN_PID_CONFIG_INIT		\
 {									\
 	.kp_num		= 0,				\
 	.kp_shr		= 12,				\
 	.ki_num		= 0,				\
 	.ki_shr		= 13,				\
+	.kd_num		= 0,				\
+	.kd_shr		= 10,				\
 	.lpf_a		= 256,				\
 	.out_max	= 1000,				\
 }
 
 TUNE_RO struct balance_pd_config tune_bal = BALANCE_PD_CONFIG_INIT;
-TUNE_RO struct pi_ctrl_config tune_vel = VELOCITY_PI_CONFIG_INIT;
-TUNE_RO struct pi_ctrl_config tune_turn = TURN_PI_CONFIG_INIT;
+TUNE_RO struct pid_ctrl_config tune_vel = VELOCITY_PID_CONFIG_INIT;
+TUNE_RO struct pid_ctrl_config tune_turn = TURN_PID_CONFIG_INIT;
 
 static struct tty *bt;
 
@@ -140,6 +144,11 @@ static void bt_put_vel(const char *tag)
 	bt_puts(" ki=");
 	bt_puts(b);
 
+	v = ((int32_t)tune_vel.kd_num * 10000 + (1 << (tune_vel.kd_shr - 1))) >> tune_vel.kd_shr;
+	fixtoa(b, sizeof(b), v, 4);
+	bt_puts(" kd=");
+	bt_puts(b);
+
 	bt_puts("\r\n");
 }
 
@@ -158,6 +167,11 @@ static void bt_put_turn(const char *tag)
 	v = ((int32_t)tune_turn.ki_num * 10000 + (1 << (tune_turn.ki_shr - 1))) >> tune_turn.ki_shr;
 	fixtoa(b, sizeof(b), v, 4);
 	bt_puts(" ki=");
+	bt_puts(b);
+
+	v = ((int32_t)tune_turn.kd_num * 10000 + (1 << (tune_turn.kd_shr - 1))) >> tune_turn.kd_shr;
+	fixtoa(b, sizeof(b), v, 4);
+	bt_puts(" kd=");
 	bt_puts(b);
 
 	bt_puts("\r\n");
@@ -246,6 +260,19 @@ static int cmd_vki(int argc, char *argv[])
 	return cmd_set_num(v, 0, 32767, &tune_vel.ki_num);
 }
 
+static int cmd_vkd(int argc, char *argv[])
+{
+	int32_t v;
+
+	if (2 != argc || 0 != parse_num(argv[1], &v))
+	{
+		bt_puts("ERR usage: vkd <num>\r\n");
+		return -EINVAL;
+	}
+
+	return cmd_set_num(v, 0, 32767, &tune_vel.kd_num);
+}
+
 static int cmd_tkp(int argc, char *argv[])
 {
 	int32_t v;
@@ -272,13 +299,26 @@ static int cmd_tki(int argc, char *argv[])
 	return cmd_set_num(v, 0, 32767, &tune_turn.ki_num);
 }
 
-static int cmd_lpfa(int argc, char *argv[])
+static int cmd_tkd(int argc, char *argv[])
 {
 	int32_t v;
 
 	if (2 != argc || 0 != parse_num(argv[1], &v))
 	{
-		bt_puts("ERR usage: lpfa <num>\r\n");
+		bt_puts("ERR usage: tkd <num>\r\n");
+		return -EINVAL;
+	}
+
+	return cmd_set_num(v, 0, 32767, &tune_turn.kd_num);
+}
+
+static int cmd_vlpfa(int argc, char *argv[])
+{
+	int32_t v;
+
+	if (2 != argc || 0 != parse_num(argv[1], &v))
+	{
+		bt_puts("ERR usage: vlpfa <num>\r\n");
 		return -EINVAL;
 	}
 
@@ -312,13 +352,13 @@ static int cmd_tlpfa(int argc, char *argv[])
 	return 0;
 }
 
-static int cmd_omax(int argc, char *argv[])
+static int cmd_bomax(int argc, char *argv[])
 {
 	int32_t v;
 
 	if (2 != argc || 0 != parse_num(argv[1], &v))
 	{
-		bt_puts("ERR usage: omax <num>\r\n");
+		bt_puts("ERR usage: bomax <num>\r\n");
 		return -EINVAL;
 	}
 
@@ -332,13 +372,13 @@ static int cmd_omax(int argc, char *argv[])
 	return 0;
 }
 
-static int cmd_omin(int argc, char *argv[])
+static int cmd_bomin(int argc, char *argv[])
 {
 	int32_t v;
 
 	if (2 != argc || 0 != parse_num(argv[1], &v))
 	{
-		bt_puts("ERR usage: omin <num> 0=off\r\n");
+		bt_puts("ERR usage: bomin <num> 0=off\r\n");
 		return -EINVAL;
 	}
 
@@ -349,6 +389,46 @@ static int cmd_omin(int argc, char *argv[])
 	}
 
 	tune_bal.out_min = (int16_t)v;
+	return 0;
+}
+
+static int cmd_vomax(int argc, char *argv[])
+{
+	int32_t v;
+
+	if (2 != argc || 0 != parse_num(argv[1], &v))
+	{
+		bt_puts("ERR usage: vomax <num>\r\n");
+		return -EINVAL;
+	}
+
+	if (1 > v || 4500 < v)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	tune_vel.out_max = (int16_t)v;
+	return 0;
+}
+
+static int cmd_tomax(int argc, char *argv[])
+{
+	int32_t v;
+
+	if (2 != argc || 0 != parse_num(argv[1], &v))
+	{
+		bt_puts("ERR usage: tomax <num>\r\n");
+		return -EINVAL;
+	}
+
+	if (1 > v || 1000 < v)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	tune_turn.out_max = (int16_t)v;
 	return 0;
 }
 #endif
@@ -545,6 +625,12 @@ static int cmd_dump(int argc, char *argv[])
 	bt_puts(" ki_shr=");
 	snprintf(b, sizeof(b), "%u", tune_vel.ki_shr);
 	bt_puts(b);
+	bt_puts(" kd_num=");
+	snprintf(b, sizeof(b), "%d", tune_vel.kd_num);
+	bt_puts(b);
+	bt_puts(" kd_shr=");
+	snprintf(b, sizeof(b), "%u", tune_vel.kd_shr);
+	bt_puts(b);
 	bt_puts(" lpf_a=");
 	snprintf(b, sizeof(b), "%u", tune_vel.lpf_a);
 	bt_puts(b);
@@ -564,6 +650,12 @@ static int cmd_dump(int argc, char *argv[])
 	bt_puts(b);
 	bt_puts(" ki_shr=");
 	snprintf(b, sizeof(b), "%u", tune_turn.ki_shr);
+	bt_puts(b);
+	bt_puts(" kd_num=");
+	snprintf(b, sizeof(b), "%d", tune_turn.kd_num);
+	bt_puts(b);
+	bt_puts(" kd_shr=");
+	snprintf(b, sizeof(b), "%u", tune_turn.kd_shr);
 	bt_puts(b);
 	bt_puts(" lpf_a=");
 	snprintf(b, sizeof(b), "%u", tune_turn.lpf_a);
@@ -644,14 +736,18 @@ static const struct tune_cmd tune_cmds[] =
 #ifndef TUNE_LOCK
 	{ "bkp",	cmd_bkp,	"balance kp <num>" },
 	{ "bkd",	cmd_bkd,	"balance kd <num>" },
+	{ "bomax",	cmd_bomax,	"balance out limit <num> 1..1000" },
+	{ "bomin",	cmd_bomin,	"balance out mute <num> 0=off" },
 	{ "vkp",	cmd_vkp,	"velocity kp <num>" },
 	{ "vki",	cmd_vki,	"velocity ki <num>" },
+	{ "vkd",	cmd_vkd,	"velocity kd <num>" },
+	{ "vlpfa",	cmd_vlpfa,	"velocity lpf a <num> 0..256" },
+	{ "vomax",	cmd_vomax,	"velocity out limit <num> 1..4500" },
 	{ "tkp",	cmd_tkp,	"turn kp <num>" },
 	{ "tki",	cmd_tki,	"turn ki <num>" },
-	{ "lpfa",	cmd_lpfa,	"velocity lpf a <num> 0..256" },
+	{ "tkd",	cmd_tkd,	"turn kd <num>" },
 	{ "tlpfa",	cmd_tlpfa,	"turn lpf a <num> 0..256" },
-	{ "omax",	cmd_omax,	"balance out limit <num> 1..1000" },
-	{ "omin",	cmd_omin,	"balance out mute <num> 0=off" },
+	{ "tomax",	cmd_tomax,	"turn out limit <num> 1..1000" },
 #endif
 	{ "stat",	cmd_stat,	"params + channel status" },
 	{ "vbat",	cmd_vbat,	"battery voltage" },

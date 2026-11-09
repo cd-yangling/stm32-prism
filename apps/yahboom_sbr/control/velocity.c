@@ -34,10 +34,10 @@
 
 #include <stdint.h>
 #include "tuning.h"
-#include "control/algo/pi_ctrl.h"
+#include "control/algo/pid_ctrl.h"
 #include "control/velocity.h"
 
-static struct pi_ctrl_state pi_st;
+static struct pid_ctrl_state pid_st;
 static int16_t	target;
 
 void velocity_init(void)
@@ -47,13 +47,13 @@ void velocity_init(void)
 
 int16_t velocity_poll(int16_t v_l, int16_t v_r)
 {
-	return pi_ctrl_update(v_l + v_r, target, &pi_st, &tune_vel);
+	return pid_ctrl_update(v_l + v_r, target, &pid_st, &tune_vel);
 }
 
 void velocity_reset(void)
 {
 	target = 0;
-	pi_ctrl_reset(&pi_st);
+	pid_ctrl_reset(&pid_st);
 }
 
 void velocity_set_target(int16_t tgt)

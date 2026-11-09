@@ -34,43 +34,104 @@
 
 #include <stdint.h>
 #include "control/algo/mul_shr.h"
-#include "control/algo/pi_ctrl.h"
+#include "control/algo/pid_ctrl.h"
 
-int16_t pi_ctrl_update(int16_t meas, int16_t target,
-		struct pi_ctrl_state *st,
-		const struct pi_ctrl_config *cfg)
+#define	PID_D_LPF_A	64
+
+static int32_t med3(int32_t a, int32_t b, int32_t c)
+{
+	if (a < b)
+	{
+		if (b < c)
+		{
+			return b;
+		}
+
+		if (a < c)
+		{
+			return c;
+		}
+
+		return a;
+	}
+
+	if (a < c)
+	{
+		return a;
+	}
+
+	if (b < c)
+	{
+		return c;
+	}
+
+	return b;
+}
+
+static void d_update(int16_t meas, struct pid_ctrl_state *pcs,
+			const struct pid_ctrl_config *cfg)
+{
+	if (0u != pcs->d_init)
+	{
+		int32_t	d_e0;
+		int32_t	med;
+
+		d_e0 = meas - pcs->d_prev;
+		med = med3(pcs->d_e2, pcs->d_e1, d_e0);
+		pcs->d_f += mul_shr_carry(&pcs->d_f_rem,
+				mul_shr(med, cfg->kd_num, cfg->kd_shr) - pcs->d_f,
+				PID_D_LPF_A, 8);
+		pcs->d_e2 = pcs->d_e1;
+		pcs->d_e1 = d_e0;
+		pcs->d_prev = meas;
+	}
+	else
+	{
+		pcs->d_init = 1u;
+		pcs->d_prev = meas;
+		pcs->d_e1 = 0;
+		pcs->d_e2 = 0;
+	}
+}
+
+int16_t pid_ctrl_update(int16_t meas, int16_t target,
+		struct pid_ctrl_state *pcs,
+		const struct pid_ctrl_config *cfg)
 {
 	int32_t	err;
-	int32_t	i_term;
+	int32_t	i_delta;
 	int32_t	out;
 
-	//	一阶 IIR 低通: vel_f = (1-a/256)*vel_f + (a/256)*v_cnt
-	//	lpf_a=84 -> alpha~0.33
-	//	lpf_a  alpha  v_cnt     延迟@10ms 
-	//	   8   0.031     32        320 ms
-	//	  16   0.063     16        160 ms
-	//	  32   0.125      8         80 ms
-	//	  64   0.250      4         40 ms
-	//	  84   0.328      4         40 ms
-	//	 128   0.500      2         20 ms
-	//	 192   0.750      2         20 ms
-	//	 255   0.996      2         20 ms
-	st->meas_f += mul_shr(meas - st->meas_f, cfg->lpf_a, 8);
+	//	微分先行: 差分取自 meas
+	d_update(meas, pcs, cfg);
 
-	err = st->meas_f - target;
+	//	一阶 IIR 低通: meas_f = (1-a/256)*meas_f + (a/256)*meas
+	//	lpf_a=84 -> alpha~0.33
+	//	lpf_a   alpha   meas     延迟@10ms
+	//	    8   0.031     32        320 ms
+	//	   16   0.063     16        160 ms
+	//	   32   0.125      8         80 ms
+	//	   64   0.250      4         40 ms
+	//	   84   0.328      4         40 ms
+	//	  128   0.500      2         20 ms
+	//	  192   0.750      2         20 ms
+	//	  255   0.996      2         20 ms
+	pcs->meas_f += mul_shr_carry(&pcs->meas_f_rem,
+				meas - pcs->meas_f, cfg->lpf_a, 8);
+
+	err = pcs->meas_f - target;
 
 	//	本次积分增量
-	i_term = mul_shr_carry(&st->ki_rem, err, cfg->ki_num, cfg->ki_shr);
-//	i_term = mul_shr_carry(NULL, err, cfg->ki_num, cfg->ki_shr);
+	i_delta = mul_shr_carry(&pcs->i_rem, err, cfg->ki_num, cfg->ki_shr);
 
 	//	P + 历史积分 + 本次增量积分
 	out = mul_shr(err, cfg->kp_num, cfg->kp_shr)
-		+ st->integral + i_term;
+		+ pcs->i_sum + i_delta + pcs->d_f;
 
 	//	条件积分抗饱和
 	if (-cfg->out_max <= out && out <= cfg->out_max)
 	{
-		st->integral += i_term;
+		pcs->i_sum += i_delta;
 	}
 
 	//	输出限幅
@@ -87,9 +148,16 @@ int16_t pi_ctrl_update(int16_t meas, int16_t target,
 	return (int16_t)out;
 }
 
-void pi_ctrl_reset(struct pi_ctrl_state *st)
+void pid_ctrl_reset(struct pid_ctrl_state *pcs)
 {
-	st->meas_f = 0;
-	st->integral = 0;
-	st->ki_rem = 0;
+	pcs->meas_f = 0;
+	pcs->meas_f_rem = 0;
+	pcs->i_sum = 0;
+	pcs->i_rem = 0;
+	pcs->d_f = 0;
+	pcs->d_f_rem = 0;
+	pcs->d_e1 = 0;
+	pcs->d_e2 = 0;
+	pcs->d_prev = 0;
+	pcs->d_init = 0u;
 }

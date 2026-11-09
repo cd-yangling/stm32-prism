@@ -38,7 +38,7 @@
 #include <stdint.h>
 
 struct balance_pd_config;
-struct pi_ctrl_config;
+struct pid_ctrl_config;
 struct tty;
 
 #ifdef TUNE_LOCK
@@ -48,8 +48,8 @@ struct tty;
 #endif
 
 extern TUNE_RO struct balance_pd_config tune_bal;
-extern TUNE_RO struct pi_ctrl_config tune_vel;
-extern TUNE_RO struct pi_ctrl_config tune_turn;
+extern TUNE_RO struct pid_ctrl_config tune_vel;
+extern TUNE_RO struct pid_ctrl_config tune_turn;
 
 void tuning_init(struct tty *t);
 void tuning_poll(void);

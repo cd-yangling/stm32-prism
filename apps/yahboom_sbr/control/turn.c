@@ -34,10 +34,10 @@
 
 #include <stdint.h>
 #include "tuning.h"
-#include "control/algo/pi_ctrl.h"
+#include "control/algo/pid_ctrl.h"
 #include "control/turn.h"
 
-static struct pi_ctrl_state pi_st;
+static struct pid_ctrl_state pid_st;
 static int16_t	target;
 
 void turn_init(void)
@@ -47,13 +47,13 @@ void turn_init(void)
 
 int16_t turn_poll(int16_t v_l, int16_t v_r)
 {
-	return pi_ctrl_update(v_l - v_r, target, &pi_st, &tune_turn);
+	return pid_ctrl_update(v_l - v_r, target, &pid_st, &tune_turn);
 }
 
 void turn_reset(void)
 {
 	target = 0;
-	pi_ctrl_reset(&pi_st);
+	pid_ctrl_reset(&pid_st);
 }
 
 void turn_set_target(int16_t tgt)
