@@ -42,4 +42,5 @@ PROJ_SRC  += tools/debug_motor.c
 PROJ_SRC  += app_die.c
 PROJ_SRC  += start_gate.c
 #PROJ_DEFS+= -DTUNE_LOCK
+#PROJ_DEFS+= -DTUNE_WIRED
 include ../../build/entry.mk

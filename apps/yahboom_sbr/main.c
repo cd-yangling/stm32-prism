@@ -54,11 +54,6 @@
 #include "tasks/battery.h"
 #include "tasks/sonar.h"
 
-//	使用 BLE 蓝牙调参 or 有线串口调参数
-//	0:	BLE 蓝牙调参
-//	1:	有线串口调参
-#define	TUNE_ON_CONSOLE	0
-
 #define	POLL_MAX_STAT	1
 
 static int brd_devices_init(void)
@@ -151,7 +146,7 @@ static int brd_devices_init(void)
 
 	button_init(board.key1);
 
-#if TUNE_ON_CONSOLE
+#ifdef TUNE_WIRED
 	tuning_init(board.console);
 #else
 	ret = tty_init(board.bt);

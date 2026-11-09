@@ -39,13 +39,17 @@
 #include "subsys/tty.h"
 #include "telemetry.h"
 
+#ifndef TUNE_WIRED
 static const uint8_t	tele_period_ms[5] = { 20u, 8u, 12u, 16u, 20u };
+#endif
 
 static struct tty	*bt;
 static int16_t		snap[TELE_CH_N];
 static uint32_t	tele_mask;
 static uint8_t		tele_up;
+#ifndef TUNE_WIRED
 static uint32_t	up_next;
+#endif
 static uint8_t		active_ch[4];
 static uint8_t		active_n;
 
@@ -88,7 +92,9 @@ int telemetry_set_mask(uint32_t mask)
 		}
 	}
 
+#ifndef TUNE_WIRED
 	up_next = 0u;
+#endif
 
 	return 0;
 }
@@ -131,6 +137,7 @@ void telemetry_poll(void)
 		return;
 	}
 
+#ifndef TUNE_WIRED
 	if (0u == up_next)
 	{
 		up_next = tick_get() + tele_period_ms[active_n];
@@ -143,6 +150,7 @@ void telemetry_poll(void)
 	}
 
 	up_next = tick_get() + tele_period_ms[active_n];
+#endif
 
 	b[0] = (char)0xA5;
 
