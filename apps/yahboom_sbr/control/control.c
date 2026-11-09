@@ -131,6 +131,7 @@ void control_poll(void)
 	uint16_t dt_10us;
 	struct imu_raw_sample raw;
 	int16_t bal_out;
+	int16_t turn_eff;
 	int32_t err_cd;
 
 	//	采样到点返回 1 并输出真实 dt(10us); 未到点返回 0, 不修改 *dt_10us
@@ -211,10 +212,14 @@ void control_poll(void)
 	err_cd = angles.pitch - (posture.mid_cd + vel_off);
 	bal_out = balance_pd_update(err_cd, raw.gy, &tune_bal);
 
+	turn_eff = turn_out;
+	if (0 == bal_out)
+		turn_eff = 0;
+
 	telemetry_feed(TELE_CH_PERR, (int16_t)err_cd);
 	telemetry_feed(TELE_CH_BOUT, bal_out);
-	telemetry_feed(TELE_CH_LPWR, (int16_t)(bal_out - turn_out));
-	telemetry_feed(TELE_CH_RPWR, (int16_t)(bal_out + turn_out));
+	telemetry_feed(TELE_CH_LPWR, (int16_t)(bal_out - turn_eff));
+	telemetry_feed(TELE_CH_RPWR, (int16_t)(bal_out + turn_eff));
 
 	{
 		if (0 < bal_out)
@@ -227,7 +232,7 @@ void control_poll(void)
 		}
 	}
 
-	motors_write(bal_out - turn_out, bal_out + turn_out);
+	motors_write(bal_out - turn_eff, bal_out + turn_eff);
 
 	telemetry_poll();
 }
