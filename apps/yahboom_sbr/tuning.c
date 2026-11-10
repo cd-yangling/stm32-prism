@@ -49,6 +49,7 @@
 #include "control/algo/pid_ctrl.h"
 #include "control/velocity.h"
 #include "control/turn.h"
+#include "control/turn_angle.h"
 #include "telemetry.h"
 #include "tasks/battery.h"
 #include "tuning.h"
@@ -77,9 +78,9 @@
 
 #define	TURN_PID_CONFIG_INIT		\
 {									\
-	.kp_num		= 0,				\
+	.kp_num		= 1600,				\
 	.kp_shr		= 12,				\
-	.ki_num		= 0,				\
+	.ki_num		= 16,				\
 	.ki_shr		= 13,				\
 	.kd_num		= 0,				\
 	.kd_shr		= 10,				\
@@ -87,9 +88,18 @@
 	.out_max	= 1000,				\
 }
 
+#define	TURN_ANGLE_CONFIG_INIT		\
+{									\
+	.kp_num		= 5500,				\
+	.kp_shr		= 13,				\
+	.out_max	= 8000,				\
+	.timeout_ms	= 4000,				\
+}
+
 TUNE_RO struct balance_pd_config tune_bal = BALANCE_PD_CONFIG_INIT;
 TUNE_RO struct pid_ctrl_config tune_vel = VELOCITY_PID_CONFIG_INIT;
 TUNE_RO struct pid_ctrl_config tune_turn = TURN_PID_CONFIG_INIT;
+TUNE_RO struct turn_angle_config tune_tang = TURN_ANGLE_CONFIG_INIT;
 
 static struct tty *bt;
 
@@ -431,6 +441,66 @@ static int cmd_tomax(int argc, char *argv[])
 	tune_turn.out_max = (int16_t)v;
 	return 0;
 }
+
+static int cmd_takp(int argc, char *argv[])
+{
+	int32_t v;
+
+	if (2 != argc || 0 != parse_num(argv[1], &v))
+	{
+		bt_puts("ERR usage: takp <num> -32768..32767\r\n");
+		return -EINVAL;
+	}
+
+	if (-32768 > v || 32767 < v)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	tune_tang.kp_num = (int16_t)v;
+	return 0;
+}
+
+static int cmd_taomax(int argc, char *argv[])
+{
+	int32_t v;
+
+	if (2 != argc || 0 != parse_num(argv[1], &v))
+	{
+		bt_puts("ERR usage: taomax <num> 1..8000\r\n");
+		return -EINVAL;
+	}
+
+	if (1 > v || 8000 < v)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	tune_tang.out_max = (int16_t)v;
+	return 0;
+}
+
+static int cmd_tatmout(int argc, char *argv[])
+{
+	int32_t v;
+
+	if (2 != argc || 0 != parse_num(argv[1], &v))
+	{
+		bt_puts("ERR usage: tatmout <ms> 500..60000\r\n");
+		return -EINVAL;
+	}
+
+	if (500 > v || 60000 < v)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	tune_tang.timeout_ms = (uint16_t)v;
+	return 0;
+}
 #endif
 
 static int cmd_run(int argc, char *argv[])
@@ -450,6 +520,7 @@ static int cmd_stop(int argc, char *argv[])
 	(void)argv;
 	tune_run_en = 0u;
 	led_off(board.led1);
+	turn_angle_measuring_abort();
 	motor_set(board.motor_l, 0);
 	motor_set(board.motor_r, 0);
 	bt_puts("OK run=0\r\n");
@@ -583,6 +654,76 @@ static int cmd_tt(int argc, char *argv[])
 	return 0;
 }
 
+static int cmd_tams(int argc, char *argv[])
+{
+	char	*end;
+	long	v;
+
+	if (2 != argc)
+	{
+		bt_puts("ERR usage: tams <cd> -18000..18000\r\n");
+		return -EINVAL;
+	}
+
+	v = strtol(argv[1], &end, 10);
+
+	if (end == argv[1] || '\0' != *end || -18000 > v || 18000 < v)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	if (0u == tune_run_en)
+	{
+		bt_puts("ERR run=0\r\n");
+		return -EACCES;
+	}
+
+	if (0 != turn_angle_measuring_start(v))
+	{
+		bt_puts("ERR busy\r\n");
+		return -EBUSY;
+	}
+
+	return 0;
+}
+
+static int cmd_tama(int argc, char *argv[])
+{
+	(void)argc;
+	(void)argv;
+	turn_angle_measuring_abort();
+
+	return 0;
+}
+
+static int cmd_tast(int argc, char *argv[])
+{
+	static const char *names[] =
+	{
+		"IDLE", "RUN", "DONE", "ETIMEOUT", "ABORTED",
+	};
+
+	char	b[16];
+	int		st;
+
+	(void)argc;
+	(void)argv;
+	st = turn_angle_poll(&tune_tang);
+	bt_puts("ta=");
+	bt_puts(names[st]);
+	bt_puts(" yaw=");
+	snprintf(b, sizeof(b), "%d", (int)turn_angle_yaw_get());
+	bt_puts(b);
+	bt_puts(" t=");
+	snprintf(b, sizeof(b), "%ums",
+			(unsigned)turn_angle_measuring_elapsed_ms());
+	bt_puts(b);
+	bt_puts("\r\n");
+
+	return 0;
+}
+
 static int cmd_dump(int argc, char *argv[])
 {
 	char b[16];
@@ -662,6 +803,20 @@ static int cmd_dump(int argc, char *argv[])
 	bt_puts(b);
 	bt_puts(" out_max=");
 	snprintf(b, sizeof(b), "%d", tune_turn.out_max);
+	bt_puts(b);
+	bt_puts("\r\n");
+
+	bt_puts("turn angle kp_num=");
+	snprintf(b, sizeof(b), "%d", tune_tang.kp_num);
+	bt_puts(b);
+	bt_puts(" kp_shr=");
+	snprintf(b, sizeof(b), "%u", tune_tang.kp_shr);
+	bt_puts(b);
+	bt_puts(" out_max=");
+	snprintf(b, sizeof(b), "%d", tune_tang.out_max);
+	bt_puts(b);
+	bt_puts(" timeout_ms=");
+	snprintf(b, sizeof(b), "%u", tune_tang.timeout_ms);
 	bt_puts(b);
 	bt_puts("\r\n");
 
@@ -748,6 +903,9 @@ static const struct tune_cmd tune_cmds[] =
 	{ "tkd",	cmd_tkd,	"turn kd <num>" },
 	{ "tlpfa",	cmd_tlpfa,	"turn lpf a <num> 0..256" },
 	{ "tomax",	cmd_tomax,	"turn out limit <num> 1..1000" },
+	{ "takp",	cmd_takp,	"turn angle kp <num> -32768..32767" },
+	{ "taomax",	cmd_taomax,	"turn angle out limit <num> 1..8000" },
+	{ "tatmout",	cmd_tatmout,	"turn angle timeout <ms> 500..60000" },
 #endif
 	{ "stat",	cmd_stat,	"params + channel status" },
 	{ "vbat",	cmd_vbat,	"battery voltage" },
@@ -757,6 +915,9 @@ static const struct tune_cmd tune_cmds[] =
 	{ "vt",		cmd_vt,		"velocity target <cnt> -8000..8000" },
 	{ "tsw",	cmd_tsw,	"turn loop 0|1" },
 	{ "tt",		cmd_tt,		"turn target <cnt> -8000..8000" },
+	{ "tams",	cmd_tams,	"turn angle measuring start <cd> -18000..18000" },
+	{ "tama",	cmd_tama,	"turn angle measuring abort" },
+	{ "tast",	cmd_tast,	"turn angle state" },
 	{ "up",		cmd_up,		"telemetry 0|1" },
 	{ "tmask",	cmd_tmask,	"telemetry channel mask <hex> 4 bits max" },
 };

@@ -41,6 +41,7 @@
 #include "lib/gadget/algo/comp_filter_10us.h"
 #include "control/algo/balance_pd.h"
 #include "control/turn.h"
+#include "control/turn_angle.h"
 #include "control/mt_speed.h"
 #include "control/velocity.h"
 #include "control/imu.h"
@@ -84,6 +85,12 @@ static void attitude_update(struct imu_raw_sample *raw, uint16_t dt_10us)
 	comp_filter_update(
 			raw->ax, raw->ay, raw->az,
 			raw->gx, raw->gy, raw->gz, CF_AXIS_PITCH, &cfg, &angles);
+
+	if (turn_angle_is_measuring())
+	{
+		turn_angle_update_yaw(raw->gz, cfg.dt_10us,
+				cfg.gyro_scale_num, cfg.gyro_scale_shr);
+	}
 }
 
 static uint8_t fall_guard(void)
@@ -150,6 +157,7 @@ void control_poll(void)
 		motors_write(0, 0);
 		velocity_reset();
 		turn_reset();
+		turn_angle_measuring_abort();
 		telemetry_reset();
 		telemetry_poll();
 		return;
@@ -161,6 +169,7 @@ void control_poll(void)
 		motors_write(0, 0);
 		velocity_reset();
 		turn_reset();
+		turn_angle_measuring_abort();
 		telemetry_reset();
 		telemetry_poll();
 		return;
@@ -193,6 +202,10 @@ void control_poll(void)
 		}
 
 		telemetry_feed(TELE_CH_VOFF, vel_off);
+
+		(void)turn_angle_poll(&tune_tang);
+
+		telemetry_feed(TELE_CH_YAW, (int16_t)turn_angle_yaw_get());
 
 		//	转向环开关
 		if (0u != tune_tsw_enabled())
