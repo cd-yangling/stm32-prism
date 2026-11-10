@@ -1,7 +1,7 @@
 #!/bin/sh
 
 cd "$(dirname "$0")"
-for t in test_lib test_fifo
+for t in test_lib test_fifo test_fxp_mul
 do
 	gcc -Wall -Wextra -fno-builtin -fsanitize=address,undefined -Os \
 	    -I../.. -I../../lib/attolibc \
