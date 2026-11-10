@@ -37,6 +37,7 @@
 
 #include <stdint.h>
 #include "lib/gadget/imu_math.h"
+#include "lib/gadget/fxp_mul.h"
 
 /* ============================================================
  *  陀螺仪积分
@@ -53,12 +54,9 @@
  *
  * 边界: 除数恰为纯 2 的幂, 四档 num=1,
  *   dt 全 uint16 范围安全 (上限 65535 * 10us = 655.35ms)
- *
- * +2^(shr-1) 对称舍入, 消负侧 floor 单向偏置
- *   (否则 (-1*200)>>16 = -1 而 (+1*200)>>16 = 0)
  */
 #define GYRO_INTEGRATE(raw, dt, num, shr) \
-	(((int32_t)(raw) * (int32_t)(dt) * (int32_t)(num) + (1 << ((shr) - 1))) >> (shr))
+	fxp_mul32((int32_t)(raw) * (dt), (num), (shr))
 
 /* ============================================================
  *  陀螺仪积分缩放因子

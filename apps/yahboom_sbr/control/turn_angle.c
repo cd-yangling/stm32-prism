@@ -34,7 +34,7 @@
 
 #include <stdint.h>
 #include <errno.h>
-#include "control/algo/mul_shr.h"
+#include "lib/gadget/fxp_mul.h"
 #include "tick.h"
 #include "control/turn.h"
 #include "control/turn_angle.h"
@@ -66,7 +66,7 @@ void turn_angle_update_yaw(int16_t gz, uint16_t dt_10us,
 		return;
 	}
 
-	yaw_cd += mul_shr_carry(&yaw_rem, (int32_t)gz * (int32_t)dt_10us,
+	yaw_cd += fxp_mul32_rem(&yaw_rem, (int32_t)gz * (int32_t)dt_10us,
 			num, shr);
 
 	still_th = (1 << shr) / 1000;
@@ -155,7 +155,7 @@ int turn_angle_poll(const struct turn_angle_config *cfg)
 		return TURN_ANGLE_ETIMEOUT;
 	}
 
-	tgt = mul_shr(err, cfg->kp_num, cfg->kp_shr);
+	tgt = fxp_mul32(err, cfg->kp_num, cfg->kp_shr);
 
 	if (cfg->out_max < tgt)
 	{

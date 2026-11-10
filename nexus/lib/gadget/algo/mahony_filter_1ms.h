@@ -49,6 +49,7 @@
 
 #include <stdint.h>
 #include "lib/gadget/imu_math.h"
+#include "lib/gadget/fxp_mul.h"
 
 #define	MAHONY_Q30_ONE		(1 << 30)
 #define	MAHONY_Q14_ONE		(1 << 14)
@@ -68,15 +69,9 @@
  *   与 角度->弧度 pi/18000 转换折入缩放表)
  *
  * 中间量 int64: 常规参数域无溢出(注意: kp/dt/num 不同的组合仍可能超过 2^63)
- *
- * +2^(shr-1) 对称舍入, 消负侧 floor 单向偏置
- *   (否则 (-1*10*572)>>19 = -1 而 (+1*10*572)>>19 = 0)
  */
 #define GYRO_INTEGRATE(raw, dt, num, shr) \
-	(((shr) >= 1 && (shr) <= 63) \
-		? (int32_t)(((int64_t)(raw) * (int64_t)(dt) * (int64_t)(num) + \
-			((int64_t)1 << ((shr) - 1))) >> (shr)) \
-		: 0)
+	((int32_t)fxp_mul64((int64_t)(raw) * (dt), (num), (shr)))
 
 /* ============================================================
  *  陀螺仪积分缩放因子

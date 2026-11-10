@@ -33,7 +33,7 @@
 /* Copyright (C) 2026 YangLing */
 
 #include <stdint.h>
-#include "control/algo/mul_shr.h"
+#include "lib/gadget/fxp_mul.h"
 #include "control/algo/pid_ctrl.h"
 
 #define	PID_D_LPF_A	64
@@ -78,8 +78,8 @@ static void d_update(int16_t meas, struct pid_ctrl_state *pcs,
 
 		d_e0 = meas - pcs->d_prev;
 		med = med3(pcs->d_e2, pcs->d_e1, d_e0);
-		pcs->d_f += mul_shr_carry(&pcs->d_f_rem,
-				mul_shr(med, cfg->kd_num, cfg->kd_shr) - pcs->d_f,
+		pcs->d_f += fxp_mul32_rem(&pcs->d_f_rem,
+				fxp_mul32(med, cfg->kd_num, cfg->kd_shr) - pcs->d_f,
 				PID_D_LPF_A, 8);
 		pcs->d_e2 = pcs->d_e1;
 		pcs->d_e1 = d_e0;
@@ -116,16 +116,16 @@ int16_t pid_ctrl_update(int16_t meas, int16_t target,
 	//	  128   0.500      2         20 ms
 	//	  192   0.750      2         20 ms
 	//	  255   0.996      2         20 ms
-	pcs->meas_f += mul_shr_carry(&pcs->meas_f_rem,
+	pcs->meas_f += fxp_mul32_rem(&pcs->meas_f_rem,
 				meas - pcs->meas_f, cfg->lpf_a, 8);
 
 	err = pcs->meas_f - target;
 
 	//	本次积分增量
-	i_delta = mul_shr_carry(&pcs->i_rem, err, cfg->ki_num, cfg->ki_shr);
+	i_delta = fxp_mul32_rem(&pcs->i_rem, err, cfg->ki_num, cfg->ki_shr);
 
 	//	P + 历史积分 + 本次增量积分
-	out = mul_shr(err, cfg->kp_num, cfg->kp_shr)
+	out = fxp_mul32(err, cfg->kp_num, cfg->kp_shr)
 		+ pcs->i_sum + i_delta + pcs->d_f;
 
 	//	条件积分抗饱和

@@ -34,14 +34,14 @@
 
 #include <stdint.h>
 #include "control/algo/balance_pd.h"
-#include "control/algo/mul_shr.h"
+#include "lib/gadget/fxp_mul.h"
 
 int16_t balance_pd_update(int32_t err_cd, int16_t gyro_lsb, const struct balance_pd_config *cfg)
 {
 	int32_t	out;
 
-	out = mul_shr(err_cd, cfg->kp_num, cfg->kp_shr)
-		+ mul_shr(gyro_lsb, cfg->kd_num, cfg->kd_shr);
+	out = fxp_mul32(err_cd, cfg->kp_num, cfg->kp_shr)
+		+ fxp_mul32(gyro_lsb, cfg->kd_num, cfg->kd_shr);
 
 	out = -out;
 
