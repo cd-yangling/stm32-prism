@@ -32,9 +32,9 @@
 
 /* Copyright (C) 2026 YangLing */
 
-#ifndef	__APPS_YAHBOOM_SBR_START_GATE_HEADER__
-#define	__APPS_YAHBOOM_SBR_START_GATE_HEADER__
+#ifndef	__APPS_YAHBOOM_SBR_MENU_HEADER__
+#define	__APPS_YAHBOOM_SBR_MENU_HEADER__
 
-void start_gate_wait(void);
+void menu_wait(void);
 
-#endif	//	__APPS_YAHBOOM_SBR_START_GATE_HEADER__
+#endif	//	__APPS_YAHBOOM_SBR_MENU_HEADER__

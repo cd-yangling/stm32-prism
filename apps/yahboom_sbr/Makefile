@@ -41,7 +41,7 @@ PROJ_SRC  += tools/debug_misc.c
 PROJ_SRC  += tools/debug_mpu6050.c
 PROJ_SRC  += tools/debug_motor.c
 PROJ_SRC  += app_die.c
-PROJ_SRC  += start_gate.c
+PROJ_SRC  += menu.c
 #PROJ_DEFS+= -DTUNE_LOCK
 #PROJ_DEFS+= -DTUNE_WIRED
 include ../../build/entry.mk

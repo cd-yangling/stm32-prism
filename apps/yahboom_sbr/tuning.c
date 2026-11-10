@@ -42,6 +42,7 @@
 #include "board.h"
 #include "motor.h"
 #include "pal/led.h"
+#include "pal/pin.h"
 #include "subsys/tty.h"
 #include "lib/gadget/split.h"
 #include "lib/gadget/fixtoa.h"
@@ -113,6 +114,8 @@ static char bt_line[64];
 static uint8_t tune_run_en = 1;
 static uint8_t tune_vsw_en = 1u;
 static uint8_t tune_tsw_en = 1u;
+static uint8_t tune_mode;
+static uint8_t tune_mode_locked;
 
 static int cmd_help(int argc, char *argv[]);
 static int cmd_dump(int argc, char *argv[]);
@@ -823,6 +826,62 @@ static int cmd_dump(int argc, char *argv[])
 	return 0;
 }
 
+static int cmd_mode(int argc, char *argv[])
+{
+	char b[16];
+
+	if (2 == argc)
+	{
+		char	*end;
+		long	v;
+
+		v = strtol(argv[1], &end, 10);
+
+		if (end == argv[1] || '\0' != *end
+			|| TUNE_MODE_REMOTE > v || TUNE_MODE_SONAR < v)
+		{
+			bt_puts("ERR range\r\n");
+			return -EINVAL;
+		}
+
+		if (tune_mode_locked)
+		{
+			bt_puts("ERR locked\r\n");
+			return -EPERM;
+		}
+
+		tune_mode = (uint8_t)v;
+		pin_set(board.buzzer, 1);
+		delay_ms(100u);
+		pin_set(board.buzzer, 0);
+	}
+	else if (2 < argc)
+	{
+		bt_puts("ERR usage: mode <0|1>, no arg = query\r\n");
+		return -EINVAL;
+	}
+
+	bt_puts("OK mode=");
+	snprintf(b, sizeof(b), "%u", tune_mode);
+	bt_puts(b);
+	bt_puts(" lock=");
+	snprintf(b, sizeof(b), "%u", tune_mode_locked);
+	bt_puts(b);
+	bt_puts("\r\n");
+
+	return 0;
+}
+
+uint8_t tune_mode_get(void)
+{
+	return tune_mode;
+}
+
+void tuning_mode_lock(void)
+{
+	tune_mode_locked = 1u;
+}
+
 static int cmd_stat(int argc, char *argv[])
 {
 	char b[16];
@@ -911,6 +970,7 @@ static const struct tune_cmd tune_cmds[] =
 	{ "vbat",	cmd_vbat,	"battery voltage" },
 	{ "run",	cmd_run,	"enable motors" },
 	{ "stop",	cmd_stop,	"motors off (default)" },
+	{ "mode",	cmd_mode,	"run mode <0|1>, no arg = query" },
 	{ "vsw",	cmd_vsw,	"velocity loop 0|1" },
 	{ "vt",		cmd_vt,		"velocity target <cnt> -8000..8000" },
 	{ "tsw",	cmd_tsw,	"turn loop 0|1" },

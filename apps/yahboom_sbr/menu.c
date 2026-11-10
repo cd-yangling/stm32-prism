@@ -38,7 +38,8 @@
 #include "pal/button.h"
 #include "subsys/input.h"
 #include "tick.h"
-#include "start_gate.h"
+#include "tuning.h"
+#include "menu.h"
 
 static int key_hit;
 static struct input_callback cb;
@@ -53,7 +54,7 @@ static void on_key(const struct input_event *ev, void *user)
 	}
 }
 
-void start_gate_wait(void)
+void menu_wait(void)
 {
 	input_callback_init(&cb, on_key, NULL, NULL);
 	input_register_callback(&cb);
@@ -69,7 +70,10 @@ void start_gate_wait(void)
 
 	while (!key_hit)
 	{
+		tuning_poll();
 		button_poll(board.key1);
 		__asm volatile ("wfi");
 	}
+
+	tuning_mode_lock();
 }

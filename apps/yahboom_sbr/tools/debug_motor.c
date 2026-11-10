@@ -42,7 +42,7 @@
 #include "pal/enc.h"
 #include "pal/pin.h"
 #include "control/mt_speed.h"
-#include "start_gate.h"
+#include "menu.h"
 #include "tools/debug_motor.h"
 
 //	电机基本测试
@@ -254,7 +254,7 @@ void debug_motor_full_speed(void)
 
 	printf("full speed test: DANGER, press & release key1 to run\n");
 
-	start_gate_wait();
+	menu_wait();
 
 	if (mt_speed_init(board.enc_l, board.enc_r))
 	{

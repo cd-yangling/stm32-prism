@@ -59,4 +59,13 @@ uint8_t tune_run_enabled(void);
 uint8_t tune_vsw_enabled(void);
 uint8_t tune_tsw_enabled(void);
 
+enum tune_mode
+{
+	TUNE_MODE_REMOTE	= 0,
+	TUNE_MODE_SONAR		= 1,
+};
+
+uint8_t tune_mode_get(void);
+void tuning_mode_lock(void);
+
 #endif	//	__APPS_YAHBOOM_SBR_TUNING_HEADER__

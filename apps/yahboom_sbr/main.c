@@ -38,7 +38,7 @@
 #include "tick.h"
 #include "board.h"
 #include "app_die.h"
-#include "start_gate.h"
+#include "menu.h"
 #include "pal/button.h"
 #include "pal/pin.h"
 #include "pal/display.h"
@@ -176,7 +176,7 @@ int main(void)
 
 //	debug_entry();
 
-	start_gate_wait();
+	menu_wait();
 
 	control_init();
 
