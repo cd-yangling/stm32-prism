@@ -38,13 +38,18 @@
 #include <stddef.h>
 #include <stdint.h>
 
+//	参考 https://en.wikipedia.org/wiki/IEEE_754
+//	IEEE 754 标准建议的 4舍 6入 5取偶 的原则
+
 static inline __attribute__((always_inline)) int32_t fxp_mul32_rem(int32_t *rem,
 		int32_t v, int32_t num, int shr)
 {
 	int32_t	p;
 	int32_t	acc;
 	int32_t	h;
+	int32_t	mod;
 	int32_t	q;
+	int32_t	r;
 
 	if ((1 > shr) || (30 < shr))
 	{
@@ -54,11 +59,19 @@ static inline __attribute__((always_inline)) int32_t fxp_mul32_rem(int32_t *rem,
 	p = v * num;
 	acc = p + ((NULL != rem) ? *rem : 0);
 	h = ((int32_t)1) << (shr - 1);
-	q = (0 <= acc) ? ((acc + h) >> shr) : -((-acc + h) >> shr);
+	mod = (((int32_t)1) << shr) - 1;
+	q = acc >> shr;
+	r = acc & mod;
+
+	if ((h < r) || ((h == r) && (q & 1)))
+	{
+		q++;
+		r -= mod + 1;
+	}
 
 	if (NULL != rem)
 	{
-		*rem = acc - q * (((int32_t)1) << shr);
+		*rem = r;
 	}
 	return q;
 }
@@ -74,7 +87,9 @@ static inline __attribute__((always_inline)) int64_t fxp_mul64_rem(int64_t *rem,
 	int64_t	p;
 	int64_t	acc;
 	int64_t	h;
+	int64_t	mod;
 	int64_t	q;
+	int64_t	r;
 
 	if ((1 > shr) || (62 < shr))
 	{
@@ -84,11 +99,19 @@ static inline __attribute__((always_inline)) int64_t fxp_mul64_rem(int64_t *rem,
 	p = v * num;
 	acc = p + ((NULL != rem) ? *rem : 0);
 	h = ((int64_t)1) << (shr - 1);
-	q = (0 <= acc) ? ((acc + h) >> shr) : -((-acc + h) >> shr);
+	mod = (((int64_t)1) << shr) - 1;
+	q = acc >> shr;
+	r = acc & mod;
+
+	if ((h < r) || ((h == r) && (q & 1)))
+	{
+		q++;
+		r -= mod + 1;
+	}
 
 	if (NULL != rem)
 	{
-		*rem = acc - q * (((int64_t)1) << shr);
+		*rem = r;
 	}
 	return q;
 }
