@@ -56,7 +56,7 @@ static const struct control_posture
 	int16_t	resume_cd;
 } posture =
 {
-	.mid_cd		= -450,
+	.mid_cd		= -310,
 	.stop_cd	= 4500,
 	.resume_cd	= 1500,
 };
