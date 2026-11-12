@@ -83,6 +83,11 @@
 #define GYRO_SCALE_NUM_2000DPS  (1)
 #define GYRO_SCALE_SHR_2000DPS  (14)
 
+#define GYRO_LSB_PER_DPS_250DPS		((int16_t)(32768 / 250))
+#define GYRO_LSB_PER_DPS_500DPS		((int16_t)(32768 / 500))
+#define GYRO_LSB_PER_DPS_1000DPS	((int16_t)(32768 / 1000))
+#define GYRO_LSB_PER_DPS_2000DPS	((int16_t)(32768 / 2000))
+
 /*
  * ============================================================
  *  滤波器配置

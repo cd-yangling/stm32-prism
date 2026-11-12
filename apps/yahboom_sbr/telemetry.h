@@ -56,6 +56,7 @@ enum tele_ch
 	TELE_CH_LPWR,	//	2ms pwm left out-tout
 	TELE_CH_RPWR,	//	2ms pwm right out+tout
 	TELE_CH_YAW,	//	10ms 0.01deg turn angle window yaw
+	TELE_CH_MDIST,	//	10ms cnt move dist window accumulated
 	TELE_CH_N
 };
 

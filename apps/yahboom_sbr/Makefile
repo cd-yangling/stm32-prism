@@ -33,6 +33,7 @@ PROJ_SRC  += control/algo/balance_pd.c
 PROJ_SRC  += control/algo/pid_ctrl.c
 PROJ_SRC  += control/turn.c
 PROJ_SRC  += control/turn_angle.c
+PROJ_SRC  += control/move_dist.c
 PROJ_SRC  += control/imu.c
 PROJ_SRC  += tuning.c
 PROJ_SRC  += telemetry.c

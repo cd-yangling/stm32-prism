@@ -39,43 +39,20 @@
 #include "control/turn.h"
 #include "control/turn_angle.h"
 
-#define	TURN_ANGLE_DONE_CD		300
-#define	TURN_ANGLE_ERR_MAX		18000
+#define	TURN_ANGLE_DONE_ERR_CD	300
+#define	TURN_ANGLE_ERR_MAX_CD	18000
 
-static uint8_t			active;
 static enum turn_angle_st	last;
 static int32_t			target_cd;
 static int32_t			yaw_cd;
 static int32_t			yaw_rem;
-static uint8_t			gz_still;
+static uint8_t			gz_settled;
 static uint32_t			start_tick;
 static uint32_t			elapsed_ms;
 
-uint8_t turn_angle_is_measuring(void)
-{
-	return active;
-}
-
-void turn_angle_update_yaw(int16_t gz, uint16_t dt_10us,
-		int32_t num, int shr)
-{
-	int32_t	still_th;
-
-	if (!active)
-	{
-		return;
-	}
-
-	yaw_cd += fxp_mul32_rem(&yaw_rem, (int32_t)gz * (int32_t)dt_10us,
-			num, shr);
-
-	still_th = (1 << shr) / 1000;
-	gz_still = (gz < still_th && -still_th < gz);
-}
-
 int turn_angle_measuring_start(int32_t cd)
 {
-	if (active)
+	if (TURN_ANGLE_RUN == last)
 	{
 		return -EBUSY;
 	}
@@ -84,7 +61,6 @@ int turn_angle_measuring_start(int32_t cd)
 	yaw_rem = 0;
 	target_cd = cd;
 	start_tick = tick_get();
-	active = 1u;
 	last = TURN_ANGLE_RUN;
 
 	return 0;
@@ -92,13 +68,31 @@ int turn_angle_measuring_start(int32_t cd)
 
 void turn_angle_measuring_abort(void)
 {
-	if (active)
+	if (TURN_ANGLE_RUN == last)
 	{
 		turn_set_target(0);
-		active = 0u;
 		last = TURN_ANGLE_ABORTED;
 		elapsed_ms = tick_get() - start_tick;
 	}
+}
+
+void turn_angle_update_yaw(int16_t gz, uint16_t dt_10us,
+		int32_t num, int shr, int16_t gz_lsb_per_dps)
+{
+	if (TURN_ANGLE_RUN != last)
+	{
+		return;
+	}
+
+	yaw_cd += fxp_mul32_rem(&yaw_rem, (int32_t)gz * (int32_t)dt_10us,
+			num, shr);
+
+	gz_settled = (gz < gz_lsb_per_dps && -gz_lsb_per_dps < gz);
+}
+
+int turn_angle_state_get(void)
+{
+	return last;
 }
 
 int32_t turn_angle_yaw_get(void)
@@ -108,7 +102,7 @@ int32_t turn_angle_yaw_get(void)
 
 uint32_t turn_angle_measuring_elapsed_ms(void)
 {
-	if (active)
+	if (TURN_ANGLE_RUN == last)
 	{
 		return tick_get() - start_tick;
 	}
@@ -116,43 +110,41 @@ uint32_t turn_angle_measuring_elapsed_ms(void)
 	return elapsed_ms;
 }
 
-int turn_angle_poll(const struct turn_angle_config *cfg)
+void turn_angle_poll(const struct turn_angle_config *cfg)
 {
 	int32_t	err;
 	int32_t	tgt;
 
-	if (!active)
+	if (TURN_ANGLE_RUN != last)
 	{
-		return last;
+		return;
 	}
 
 	err = target_cd - yaw_cd;
 
-	if (TURN_ANGLE_ERR_MAX < err)
+	if (TURN_ANGLE_ERR_MAX_CD < err)
 	{
-		err = TURN_ANGLE_ERR_MAX;
+		err = TURN_ANGLE_ERR_MAX_CD;
 	}
-	else if (-TURN_ANGLE_ERR_MAX > err)
+	else if (-TURN_ANGLE_ERR_MAX_CD > err)
 	{
-		err = -TURN_ANGLE_ERR_MAX;
+		err = -TURN_ANGLE_ERR_MAX_CD;
 	}
 
-	if ((TURN_ANGLE_DONE_CD > err && -TURN_ANGLE_DONE_CD < err) && gz_still)
+	if ((TURN_ANGLE_DONE_ERR_CD > err && -TURN_ANGLE_DONE_ERR_CD < err) && gz_settled)
 	{
 		turn_set_target(0);
-		active = 0u;
 		last = TURN_ANGLE_DONE;
 		elapsed_ms = tick_get() - start_tick;
-		return TURN_ANGLE_DONE;
+		return;
 	}
 
 	if (tick_expired(start_tick + cfg->timeout_ms))
 	{
 		turn_set_target(0);
-		active = 0u;
 		last = TURN_ANGLE_ETIMEOUT;
 		elapsed_ms = tick_get() - start_tick;
-		return TURN_ANGLE_ETIMEOUT;
+		return;
 	}
 
 	tgt = fxp_mul32(err, cfg->kp_num, cfg->kp_shr);
@@ -167,6 +159,4 @@ int turn_angle_poll(const struct turn_angle_config *cfg)
 	}
 
 	turn_set_target((int16_t)tgt);
-
-	return TURN_ANGLE_RUN;
 }

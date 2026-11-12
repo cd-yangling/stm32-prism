@@ -54,13 +54,13 @@ enum turn_angle_st
 	TURN_ANGLE_ABORTED,
 };
 
-void turn_angle_update_yaw(int16_t gz, uint16_t dt_10us,
-		int32_t num, int shr);
-uint8_t turn_angle_is_measuring(void);
 int turn_angle_measuring_start(int32_t cd);
 void turn_angle_measuring_abort(void);
-int turn_angle_poll(const struct turn_angle_config *cfg);
+void turn_angle_update_yaw(int16_t gz, uint16_t dt_10us,
+		int32_t num, int shr, int16_t gz_lsb_per_dps);
+int turn_angle_state_get(void);
 int32_t turn_angle_yaw_get(void);
 uint32_t turn_angle_measuring_elapsed_ms(void);
+void turn_angle_poll(const struct turn_angle_config *cfg);
 
 #endif	//	__APPS_YAHBOOM_SBR_CONTROL_TURN_ANGLE_HEADER__

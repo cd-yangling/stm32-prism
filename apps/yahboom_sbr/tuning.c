@@ -51,6 +51,7 @@
 #include "control/velocity.h"
 #include "control/turn.h"
 #include "control/turn_angle.h"
+#include "control/move_dist.h"
 #include "telemetry.h"
 #include "tasks/battery.h"
 #include "tuning.h"
@@ -97,10 +98,19 @@
 	.timeout_ms	= 4000,				\
 }
 
+#define	MOVE_DIST_CONFIG_INIT		\
+{									\
+	.kp_num		= 10,				\
+	.kp_shr		= 6,				\
+	.out_max	= 600,				\
+	.timeout_ms	= 10000,			\
+}
+
 TUNE_RO struct balance_pd_config tune_bal = BALANCE_PD_CONFIG_INIT;
 TUNE_RO struct pid_ctrl_config tune_vel = VELOCITY_PID_CONFIG_INIT;
 TUNE_RO struct pid_ctrl_config tune_turn = TURN_PID_CONFIG_INIT;
 TUNE_RO struct turn_angle_config tune_tang = TURN_ANGLE_CONFIG_INIT;
+TUNE_RO struct move_dist_config tune_move = MOVE_DIST_CONFIG_INIT;
 
 static struct tty *bt;
 
@@ -119,76 +129,6 @@ static uint8_t tune_mode_locked;
 
 static int cmd_help(int argc, char *argv[]);
 static int cmd_dump(int argc, char *argv[]);
-
-static void bt_put_bal(const char *tag)
-{
-	char b[16];
-	int32_t v;
-
-	bt_puts(tag);
-
-	v = ((int32_t)tune_bal.kp_num * 10000 + (1 << (tune_bal.kp_shr - 1))) >> tune_bal.kp_shr;
-	fixtoa(b, sizeof(b), v, 4);
-	bt_puts(" kp=");
-	bt_puts(b);
-
-	v = ((int32_t)tune_bal.kd_num * 10000 + (1 << (tune_bal.kd_shr - 1))) >> tune_bal.kd_shr;
-	fixtoa(b, sizeof(b), v, 4);
-	bt_puts(" kd=");
-	bt_puts(b);
-
-	bt_puts("\r\n");
-}
-
-static void bt_put_vel(const char *tag)
-{
-	char b[16];
-	int32_t v;
-
-	bt_puts(tag);
-
-	v = ((int32_t)tune_vel.kp_num * 10000 + (1 << (tune_vel.kp_shr - 1))) >> tune_vel.kp_shr;
-	fixtoa(b, sizeof(b), v, 4);
-	bt_puts(" kp=");
-	bt_puts(b);
-
-	v = ((int32_t)tune_vel.ki_num * 10000 + (1 << (tune_vel.ki_shr - 1))) >> tune_vel.ki_shr;
-	fixtoa(b, sizeof(b), v, 4);
-	bt_puts(" ki=");
-	bt_puts(b);
-
-	v = ((int32_t)tune_vel.kd_num * 10000 + (1 << (tune_vel.kd_shr - 1))) >> tune_vel.kd_shr;
-	fixtoa(b, sizeof(b), v, 4);
-	bt_puts(" kd=");
-	bt_puts(b);
-
-	bt_puts("\r\n");
-}
-
-static void bt_put_turn(const char *tag)
-{
-	char b[16];
-	int32_t v;
-
-	bt_puts(tag);
-
-	v = ((int32_t)tune_turn.kp_num * 10000 + (1 << (tune_turn.kp_shr - 1))) >> tune_turn.kp_shr;
-	fixtoa(b, sizeof(b), v, 4);
-	bt_puts(" kp=");
-	bt_puts(b);
-
-	v = ((int32_t)tune_turn.ki_num * 10000 + (1 << (tune_turn.ki_shr - 1))) >> tune_turn.ki_shr;
-	fixtoa(b, sizeof(b), v, 4);
-	bt_puts(" ki=");
-	bt_puts(b);
-
-	v = ((int32_t)tune_turn.kd_num * 10000 + (1 << (tune_turn.kd_shr - 1))) >> tune_turn.kd_shr;
-	fixtoa(b, sizeof(b), v, 4);
-	bt_puts(" kd=");
-	bt_puts(b);
-
-	bt_puts("\r\n");
-}
 
 #ifndef TUNE_LOCK
 static int parse_num(const char *s, int32_t *out)
@@ -504,6 +444,66 @@ static int cmd_tatmout(int argc, char *argv[])
 	tune_tang.timeout_ms = (uint16_t)v;
 	return 0;
 }
+
+static int cmd_mdkp(int argc, char *argv[])
+{
+	int32_t	v;
+
+	if (2 != argc || 0 != parse_num(argv[1], &v))
+	{
+		bt_puts("ERR usage: mdkp <num> -32768..32767\r\n");
+		return -EINVAL;
+	}
+
+	if (-32768 > v || 32767 < v)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	tune_move.kp_num = (int16_t)v;
+	return 0;
+}
+
+static int cmd_mdomax(int argc, char *argv[])
+{
+	int32_t	v;
+
+	if (2 != argc || 0 != parse_num(argv[1], &v))
+	{
+		bt_puts("ERR usage: mdomax <num> 1..8000\r\n");
+		return -EINVAL;
+	}
+
+	if (1 > v || 8000 < v)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	tune_move.out_max = (int16_t)v;
+	return 0;
+}
+
+static int cmd_mdtmout(int argc, char *argv[])
+{
+	int32_t	v;
+
+	if (2 != argc || 0 != parse_num(argv[1], &v))
+	{
+		bt_puts("ERR usage: mdtmout <ms> 500..60000\r\n");
+		return -EINVAL;
+	}
+
+	if (500 > v || 60000 < v)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	tune_move.timeout_ms = (uint16_t)v;
+	return 0;
+}
 #endif
 
 static int cmd_run(int argc, char *argv[])
@@ -524,6 +524,7 @@ static int cmd_stop(int argc, char *argv[])
 	tune_run_en = 0u;
 	led_off(board.led1);
 	turn_angle_measuring_abort();
+	move_dist_measuring_abort();
 	motor_set(board.motor_l, 0);
 	motor_set(board.motor_r, 0);
 	bt_puts("OK run=0\r\n");
@@ -712,7 +713,7 @@ static int cmd_tast(int argc, char *argv[])
 
 	(void)argc;
 	(void)argv;
-	st = turn_angle_poll(&tune_tang);
+	st = turn_angle_state_get();
 	bt_puts("ta=");
 	bt_puts(names[st]);
 	bt_puts(" yaw=");
@@ -727,16 +728,82 @@ static int cmd_tast(int argc, char *argv[])
 	return 0;
 }
 
+static int cmd_mdms(int argc, char *argv[])
+{
+	char	*end;
+	long	v;
+
+	if (2 != argc)
+	{
+		bt_puts("ERR usage: mdms <mm> -2000..2000\r\n");
+		return -EINVAL;
+	}
+
+	v = strtol(argv[1], &end, 10);
+
+	if (end == argv[1] || '\0' != *end || -2000 > v || 2000 < v)
+	{
+		bt_puts("ERR range\r\n");
+		return -EINVAL;
+	}
+
+	if (0u == tune_run_en)
+	{
+		bt_puts("ERR run=0\r\n");
+		return -EACCES;
+	}
+
+	if (0 != move_dist_measuring_start(v))
+	{
+		bt_puts("ERR busy\r\n");
+		return -EBUSY;
+	}
+
+	return 0;
+}
+
+static int cmd_mdma(int argc, char *argv[])
+{
+	(void)argc;
+	(void)argv;
+	move_dist_measuring_abort();
+
+	return 0;
+}
+
+static int cmd_mdst(int argc, char *argv[])
+{
+	static const char *names[] =
+	{
+		"IDLE", "RUN", "DONE", "ETIMEOUT", "ABORTED",
+	};
+
+	char	b[16];
+	int		st;
+
+	(void)argc;
+	(void)argv;
+	st = move_dist_state_get();
+	bt_puts("md=");
+	bt_puts(names[st]);
+	bt_puts(" dist=");
+	snprintf(b, sizeof(b), "%d", (int)move_dist_dist_get());
+	bt_puts(b);
+	bt_puts(" t=");
+	snprintf(b, sizeof(b), "%ums",
+			(unsigned)move_dist_measuring_elapsed_ms());
+	bt_puts(b);
+	bt_puts("\r\n");
+
+	return 0;
+}
+
 static int cmd_dump(int argc, char *argv[])
 {
 	char b[16];
 
 	(void)argc;
 	(void)argv;
-	bt_put_bal("bal");
-	bt_put_vel("vel");
-	bt_put_turn("turn");
-
 	bt_puts("bal kp_num=");
 	snprintf(b, sizeof(b), "%d", tune_bal.kp_num);
 	bt_puts(b);
@@ -820,6 +887,20 @@ static int cmd_dump(int argc, char *argv[])
 	bt_puts(b);
 	bt_puts(" timeout_ms=");
 	snprintf(b, sizeof(b), "%u", tune_tang.timeout_ms);
+	bt_puts(b);
+	bt_puts("\r\n");
+
+	bt_puts("move dist kp_num=");
+	snprintf(b, sizeof(b), "%d", tune_move.kp_num);
+	bt_puts(b);
+	bt_puts(" kp_shr=");
+	snprintf(b, sizeof(b), "%u", tune_move.kp_shr);
+	bt_puts(b);
+	bt_puts(" out_max=");
+	snprintf(b, sizeof(b), "%d", tune_move.out_max);
+	bt_puts(b);
+	bt_puts(" timeout_ms=");
+	snprintf(b, sizeof(b), "%u", tune_move.timeout_ms);
 	bt_puts(b);
 	bt_puts("\r\n");
 
@@ -965,6 +1046,9 @@ static const struct tune_cmd tune_cmds[] =
 	{ "takp",	cmd_takp,	"turn angle kp <num> -32768..32767" },
 	{ "taomax",	cmd_taomax,	"turn angle out limit <num> 1..8000" },
 	{ "tatmout",	cmd_tatmout,	"turn angle timeout <ms> 500..60000" },
+	{ "mdkp",	cmd_mdkp,	"move dist kp <num> -32768..32767" },
+	{ "mdomax",	cmd_mdomax,	"move dist out limit <num> 1..8000" },
+	{ "mdtmout",	cmd_mdtmout,	"move dist timeout <ms> 500..60000" },
 #endif
 	{ "stat",	cmd_stat,	"params + channel status" },
 	{ "vbat",	cmd_vbat,	"battery voltage" },
@@ -978,6 +1062,9 @@ static const struct tune_cmd tune_cmds[] =
 	{ "tams",	cmd_tams,	"turn angle measuring start <cd> -18000..18000" },
 	{ "tama",	cmd_tama,	"turn angle measuring abort" },
 	{ "tast",	cmd_tast,	"turn angle state" },
+	{ "mdms",	cmd_mdms,	"move dist measuring start <mm> -2000..2000" },
+	{ "mdma",	cmd_mdma,	"move dist measuring abort" },
+	{ "mdst",	cmd_mdst,	"move dist state" },
 	{ "up",		cmd_up,		"telemetry 0|1" },
 	{ "tmask",	cmd_tmask,	"telemetry channel mask <hex> 4 bits max" },
 };

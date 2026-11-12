@@ -42,6 +42,7 @@
 #include "control/algo/balance_pd.h"
 #include "control/turn.h"
 #include "control/turn_angle.h"
+#include "control/move_dist.h"
 #include "control/mt_speed.h"
 #include "control/velocity.h"
 #include "control/imu.h"
@@ -86,11 +87,9 @@ static void attitude_update(struct imu_raw_sample *raw, uint16_t dt_10us)
 			raw->ax, raw->ay, raw->az,
 			raw->gx, raw->gy, raw->gz, CF_AXIS_PITCH, &cfg, &angles);
 
-	if (turn_angle_is_measuring())
-	{
-		turn_angle_update_yaw(raw->gz, cfg.dt_10us,
-				cfg.gyro_scale_num, cfg.gyro_scale_shr);
-	}
+	turn_angle_update_yaw(raw->gz, cfg.dt_10us,
+			cfg.gyro_scale_num, cfg.gyro_scale_shr,
+			GYRO_LSB_PER_DPS_500DPS);
 }
 
 static uint8_t fall_guard(void)
@@ -158,6 +157,7 @@ void control_poll(void)
 		velocity_reset();
 		turn_reset();
 		turn_angle_measuring_abort();
+		move_dist_measuring_abort();
 		telemetry_reset();
 		telemetry_poll();
 		return;
@@ -170,6 +170,7 @@ void control_poll(void)
 		velocity_reset();
 		turn_reset();
 		turn_angle_measuring_abort();
+		move_dist_measuring_abort();
 		telemetry_reset();
 		telemetry_poll();
 		return;
@@ -190,6 +191,8 @@ void control_poll(void)
 		telemetry_feed(TELE_CH_VT, velocity_get_target());
 		telemetry_feed(TELE_CH_TT, turn_get_target());
 
+		move_dist_poll((int16_t)(v_l + v_r), &tune_move);
+
 		//	速度环开关
 		if (0u != tune_vsw_enabled())
 		{
@@ -203,9 +206,10 @@ void control_poll(void)
 
 		telemetry_feed(TELE_CH_VOFF, vel_off);
 
-		(void)turn_angle_poll(&tune_tang);
+		turn_angle_poll(&tune_tang);
 
 		telemetry_feed(TELE_CH_YAW, (int16_t)turn_angle_yaw_get());
+		telemetry_feed(TELE_CH_MDIST, (int16_t)move_dist_dist_get());
 
 		//	转向环开关
 		if (0u != tune_tsw_enabled())

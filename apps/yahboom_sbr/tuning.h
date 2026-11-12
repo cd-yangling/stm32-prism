@@ -40,6 +40,7 @@
 struct balance_pd_config;
 struct pid_ctrl_config;
 struct turn_angle_config;
+struct move_dist_config;
 struct tty;
 
 #ifdef TUNE_LOCK
@@ -52,6 +53,7 @@ extern TUNE_RO struct balance_pd_config tune_bal;
 extern TUNE_RO struct pid_ctrl_config tune_vel;
 extern TUNE_RO struct pid_ctrl_config tune_turn;
 extern TUNE_RO struct turn_angle_config tune_tang;
+extern TUNE_RO struct move_dist_config tune_move;
 
 void tuning_init(struct tty *t);
 void tuning_poll(void);
