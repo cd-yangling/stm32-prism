@@ -51,6 +51,7 @@
 #include "tuning.h"
 #include "tools/debug_entry.h"
 #include "control/control.h"
+#include "tasks/avoid.h"
 #include "tasks/battery.h"
 #include "tasks/sonar.h"
 
@@ -191,6 +192,7 @@ int main(void)
 #if defined(CONFIG_SONAR)
 		sonar_poll();
 #endif
+		avoid_poll();
 #if POLL_MAX_STAT
 		{
 			uint32_t poll_diff_cyc = tick_get_cyc() - poll_t0_cyc;

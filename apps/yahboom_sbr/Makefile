@@ -26,6 +26,7 @@ PROJ_SRC   = main.c board.c
 PROJ_SRC  += motor.c
 PROJ_SRC  += tasks/battery.c
 PROJ_SRC  += tasks/sonar.c
+PROJ_SRC  += tasks/avoid.c
 PROJ_SRC  += control/control.c
 PROJ_SRC  += control/velocity.c
 PROJ_SRC  += control/mt_speed.c

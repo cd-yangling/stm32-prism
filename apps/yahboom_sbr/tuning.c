@@ -53,6 +53,7 @@
 #include "control/turn_angle.h"
 #include "control/move_dist.h"
 #include "telemetry.h"
+#include "tasks/avoid.h"
 #include "tasks/battery.h"
 #include "tuning.h"
 
@@ -100,7 +101,7 @@
 
 #define	MOVE_DIST_CONFIG_INIT		\
 {									\
-	.kp_num		= 10,				\
+	.kp_num		= 150,				\
 	.kp_shr		= 6,				\
 	.out_max	= 600,				\
 	.timeout_ms	= 10000,			\
@@ -798,6 +799,22 @@ static int cmd_mdst(int argc, char *argv[])
 	return 0;
 }
 
+static int cmd_avrst(int argc, char *argv[])
+{
+	(void)argc;
+	(void)argv;
+
+	if (!avoid_halt_resume())
+	{
+		bt_puts("ERR not halted\r\n");
+		return -EPERM;
+	}
+
+	bt_puts("OK\r\n");
+
+	return 0;
+}
+
 static int cmd_dump(int argc, char *argv[])
 {
 	char b[16];
@@ -1065,6 +1082,7 @@ static const struct tune_cmd tune_cmds[] =
 	{ "mdms",	cmd_mdms,	"move dist measuring start <mm> -2000..2000" },
 	{ "mdma",	cmd_mdma,	"move dist measuring abort" },
 	{ "mdst",	cmd_mdst,	"move dist state" },
+	{ "avrst",	cmd_avrst,	"avoid halt resume + state" },
 	{ "up",		cmd_up,		"telemetry 0|1" },
 	{ "tmask",	cmd_tmask,	"telemetry channel mask <hex> 4 bits max" },
 };

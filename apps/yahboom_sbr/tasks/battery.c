@@ -75,7 +75,7 @@ enum battery_st
 	BAT_BEEP_OFF,		//	低电量态: 停
 };
 
-static enum battery_st st;
+static enum battery_st state;
 static uint32_t deadline;
 static uint32_t sum_mv;
 static uint8_t n_try;
@@ -91,7 +91,7 @@ static void group_clear(void)
 
 void battery_init(void)
 {
-	st = BAT_SUBMIT;
+	state = BAT_SUBMIT;
 	deadline = tick_get();
 	group_clear();
 }
@@ -105,11 +105,11 @@ void battery_poll(void)
 		return;
 	}
 
-	switch (st)
+	switch (state)
 	{
 	case BAT_SUBMIT:
 		(void)sensor_submit(board.vbat_sen);
-		st = BAT_WAIT;
+		state = BAT_WAIT;
 		deadline = tick_get() + BAT_SMP_MS;
 		break;
 
@@ -125,7 +125,7 @@ void battery_poll(void)
 
 		if (BAT_NSAMP > n_try)
 		{
-			st = BAT_SUBMIT;
+			state = BAT_SUBMIT;
 			deadline = tick_get();
 		}
 		else if (0u == n_ok)
@@ -139,13 +139,13 @@ void battery_poll(void)
 			if (last_mv < BAT_VBAT_LOW_MV)
 			{
 				motor_output_enable(0u);
-				st = BAT_BEEP_ON;
+				state = BAT_BEEP_ON;
 				deadline = tick_get();
 			}
 			else
 			{
 				motor_output_enable(1u);
-				st = BAT_SLEEP;
+				state = BAT_SLEEP;
 				deadline = tick_get() + BAT_SLEEP_MS;
 			}
 		}
@@ -153,19 +153,19 @@ void battery_poll(void)
 
 	case BAT_SLEEP:
 		group_clear();
-		st = BAT_SUBMIT;
+		state = BAT_SUBMIT;
 		deadline = tick_get();
 		break;
 
 	case BAT_BEEP_ON:
 		pin_set(board.buzzer, 1);
-		st = BAT_BEEP_OFF;
+		state = BAT_BEEP_OFF;
 		deadline = tick_get() + BAT_BEEP_MS;
 		break;
 
 	case BAT_BEEP_OFF:
 		pin_set(board.buzzer, 0);
-		st = BAT_BEEP_ON;
+		state = BAT_BEEP_ON;
 		deadline = tick_get() + BAT_PAUSE_MS;
 		break;
 	}

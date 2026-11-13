@@ -35,6 +35,8 @@
 #ifndef	__APPS_YAHBOOM_SBR_CONTROL_CONTROL_HEADER__
 #define	__APPS_YAHBOOM_SBR_CONTROL_CONTROL_HEADER__
 
+#include <stdint.h>
+
 void control_init(void);
 void control_poll(void);
 

@@ -37,15 +37,15 @@
 
 #include <stdint.h>
 
-enum sonar_st
+enum sonar_status
 {
 	SONAR_OK,
-	SONAR_NOECHO,
+	SONAR_OOR,
 	SONAR_NOHW,
 };
 
 void sonar_init(void);
 void sonar_poll(void);
-void sonar_get(uint16_t *mm, enum sonar_st *st);
+void sonar_get(uint16_t *mm, enum sonar_status *ss);
 
 #endif	//	__APPS_YAHBOOM_SBR_TASKS_SONAR_HEADER__

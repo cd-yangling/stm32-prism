@@ -43,6 +43,7 @@
 #include "board.h"
 #include "pal/pin.h"
 #include "tasks/sonar.h"
+#include "telemetry.h"
 
 #define	SONAR_TRIG_US		15u
 #define	SONAR_TIMEOUT_MS	50u
@@ -50,16 +51,16 @@
 #define	SONAR_MIN_MM		20u
 #define	SONAR_MAX_MM		5600u
 
-enum sonar_task_st
+enum sonar_st
 {
-	SONAR_TASK_IDLE,
-	SONAR_TASK_WAIT,
+	SONAR_IDLE,
+	SONAR_WAIT,
 };
 
-static enum sonar_task_st task_st;
+static enum sonar_st state;
 static uint32_t deadline;
 static uint16_t dist_mm;
-static enum sonar_st status;
+static enum sonar_status status;
 
 static void tim2_cap_init(void)
 {
@@ -102,7 +103,7 @@ void sonar_init(void)
 {
 	tim2_cap_init();
 
-	task_st = SONAR_TASK_IDLE;
+	state = SONAR_IDLE;
 	deadline = tick_get();
 	dist_mm = 0u;
 	status = SONAR_NOHW;
@@ -118,15 +119,15 @@ void sonar_poll(void)
 		return;
 	}
 
-	switch (task_st)
+	switch (state)
 	{
-	case SONAR_TASK_IDLE:
+	case SONAR_IDLE:
 		measure_start();
-		task_st = SONAR_TASK_WAIT;
+		state = SONAR_WAIT;
 		deadline = tick_get() + SONAR_TIMEOUT_MS;
 		break;
 
-	case SONAR_TASK_WAIT:
+	case SONAR_WAIT:
 		if (LL_TIM_IsActiveFlag_CC1(TIM2))
 		{
 			us = LL_TIM_IC_GetCaptureCH1(TIM2);
@@ -135,7 +136,7 @@ void sonar_poll(void)
 			if (SONAR_MIN_MM > mm || SONAR_MAX_MM < mm)
 			{
 				dist_mm = 0u;
-				status = SONAR_NOECHO;
+				status = SONAR_OOR;
 			}
 			else
 			{
@@ -149,16 +150,18 @@ void sonar_poll(void)
 			status = SONAR_NOHW;
 		}
 
-		task_st = SONAR_TASK_IDLE;
+		telemetry_feed(TELE_CH_SONAR, (int16_t)dist_mm);
+
+		state = SONAR_IDLE;
 		deadline = tick_get() + SONAR_PERIOD_MS;
 		break;
 	}
 }
 
-void sonar_get(uint16_t *mm, enum sonar_st *st)
+void sonar_get(uint16_t *mm, enum sonar_status *ss)
 {
 	*mm = dist_mm;
-	*st = status;
+	*ss = status;
 }
 
 #endif
