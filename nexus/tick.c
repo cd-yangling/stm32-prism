@@ -39,6 +39,8 @@
 
 #if defined(STM32F1)
 #include "stm32f1xx_hal.h"
+#elif defined(STM32F4)
+#include "stm32f4xx_hal.h"
 #elif defined(STM32H7)
 #include "stm32h7xx_hal.h"
 #endif
@@ -47,6 +49,8 @@
 
 #if defined(STM32F1)
 #include "stm32f1xx.h"
+#elif defined(STM32F4)
+#include "stm32f4xx.h"
 #elif defined(STM32H7)
 #include "stm32h7xx.h"
 #endif

@@ -44,6 +44,8 @@
 #ifdef CONFIG_I2C_BITBANG_FAST
 #if defined(STM32F1)
 #include "stm32f1xx.h"
+#elif defined(STM32F4)
+#include "stm32f4xx.h"
 #elif defined(STM32H7)
 #include "stm32h7xx.h"
 #endif

@@ -93,6 +93,7 @@ make vimdb        # 生成 tags + cscope
 | `embedfire_zhinanzhe` | STM32F103VET6 | 野火指南者开发板 |
 | `embedfire_h7pro` | STM32H7xx | 野火 STM32H750XB_H743XI Pro |
 | `yahboom_sbr` | STM32F103RCT6 | 亚博智能平衡小车 |
+| `wheeltec_f570` | STM32F405RGT6 | 轮趣科技 F570 四轴飞行器(开发ing) |
 
 ---
 
