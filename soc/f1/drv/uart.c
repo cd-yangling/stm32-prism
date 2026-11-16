@@ -45,21 +45,21 @@
 #include "pal/pin.h"
 #include "tick.h"
 #include "irq.h"
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 #include "stm32f1xx_ll_bus.h"
 #include "stm32f1xx_ll_dma.h"
 #endif
 
 #define	UART_TMO_MS	(100u)
 
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_UART_IRQ) || defined(CONFIG_UART_DMA)
 struct uart_dat
 {
-#ifdef CONFIG_UART_INTERRUPT_DRIVEN
+#ifdef CONFIG_UART_IRQ
 	uart_irq_cb_t		cb;
 	void			*	ud;
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 	uart_async_cb_t		acb;
 	void			*	aud;
 	uint8_t			*	rx_buf;
@@ -74,10 +74,10 @@ struct uart_dat
 struct uart_ctx
 {
 	USART_TypeDef	*regs;
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_UART_IRQ) || defined(CONFIG_UART_DMA)
 	struct uart_dat	*dat;
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 	uint32_t		rx_ch;
 	uint32_t		tx_ch;
 #endif
@@ -102,11 +102,11 @@ static int f1_uart_init(const struct uart_port *p, const struct uart_pins *pins,
 		}
 		LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART1);
 		pclk = rcc_clock.PCLK2_Frequency;
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA)
 		NVIC_SetPriority(USART1_IRQn, IRQ_PRIO_USART1);
 		NVIC_EnableIRQ(USART1_IRQn);
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_USART1_DMA
 		NVIC_SetPriority(DMA1_Channel4_IRQn, IRQ_PRIO_USART1);
 		NVIC_EnableIRQ(DMA1_Channel4_IRQn);
 		NVIC_SetPriority(DMA1_Channel5_IRQn, IRQ_PRIO_USART1);
@@ -122,11 +122,11 @@ static int f1_uart_init(const struct uart_port *p, const struct uart_pins *pins,
 		}
 		LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART2);
 		pclk = rcc_clock.PCLK1_Frequency;
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART2_IRQ) || defined(CONFIG_USART2_DMA)
 		NVIC_SetPriority(USART2_IRQn, IRQ_PRIO_USART2);
 		NVIC_EnableIRQ(USART2_IRQn);
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_USART2_DMA
 		NVIC_SetPriority(DMA1_Channel7_IRQn, IRQ_PRIO_USART2);
 		NVIC_EnableIRQ(DMA1_Channel7_IRQn);
 		NVIC_SetPriority(DMA1_Channel6_IRQn, IRQ_PRIO_USART2);
@@ -142,11 +142,11 @@ static int f1_uart_init(const struct uart_port *p, const struct uart_pins *pins,
 		}
 		LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART3);
 		pclk = rcc_clock.PCLK1_Frequency;
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART3_IRQ) || defined(CONFIG_USART3_DMA)
 		NVIC_SetPriority(USART3_IRQn, IRQ_PRIO_USART3);
 		NVIC_EnableIRQ(USART3_IRQn);
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_USART3_DMA
 		NVIC_SetPriority(DMA1_Channel2_IRQn, IRQ_PRIO_USART3);
 		NVIC_EnableIRQ(DMA1_Channel2_IRQn);
 		NVIC_SetPriority(DMA1_Channel3_IRQn, IRQ_PRIO_USART3);
@@ -158,7 +158,7 @@ static int f1_uart_init(const struct uart_port *p, const struct uart_pins *pins,
 	{
 		LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART4);
 		pclk = rcc_clock.PCLK1_Frequency;
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#ifdef CONFIG_UART4_IRQ
 		NVIC_SetPriority(UART4_IRQn, IRQ_PRIO_UART4);
 		NVIC_EnableIRQ(UART4_IRQn);
 #endif
@@ -169,7 +169,7 @@ static int f1_uart_init(const struct uart_port *p, const struct uart_pins *pins,
 	{
 		LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART5);
 		pclk = rcc_clock.PCLK1_Frequency;
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#ifdef CONFIG_UART5_IRQ
 		NVIC_SetPriority(UART5_IRQn, IRQ_PRIO_UART5);
 		NVIC_EnableIRQ(UART5_IRQn);
 #endif
@@ -189,7 +189,7 @@ static int f1_uart_init(const struct uart_port *p, const struct uart_pins *pins,
 	LL_USART_SetParity(x->regs, (1 == cfg->parity) ? LL_USART_PARITY_EVEN
 			: (2 == cfg->parity) ? LL_USART_PARITY_ODD : LL_USART_PARITY_NONE);
 	LL_USART_SetStopBitsLength(x->regs, (2 == cfg->stop_bits) ? LL_USART_STOPBITS_2 : LL_USART_STOPBITS_1);
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
 #endif
 	LL_USART_SetTransferDirection(x->regs, LL_USART_DIRECTION_TX_RX);
@@ -231,7 +231,7 @@ static int f1_uart_poll_in(const struct uart_port *p, uint8_t *c)
 	return 0;
 }
 
-#ifdef CONFIG_UART_INTERRUPT_DRIVEN
+#ifdef CONFIG_UART_IRQ
 static int f1_uart_fifo_fill(const struct uart_port *p, const uint8_t *tx,
 		uint32_t len)
 {
@@ -277,6 +277,11 @@ static int f1_uart_irq_update(const struct uart_port *p)
 static int f1_uart_irq_callback_set(const struct uart_port *p, uart_irq_cb_t cb, void *ud)
 {
 	const struct uart_ctx *x = p->ctx;
+
+	if (NULL == x->dat)
+	{
+		return -ENODEV;
+	}
 
 	x->dat->cb = cb;
 	x->dat->ud = ud;
@@ -343,7 +348,7 @@ static void f1_uart_irq_rx_enable(const struct uart_port *p)
 }
 #endif
 
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 static void f1_uart_harvest(const struct uart_port *p)
 {
 	const struct uart_ctx *x = p->ctx;
@@ -394,6 +399,11 @@ static int f1_uart_callback_set(const struct uart_port *p, uart_async_cb_t cb,
 		void *ud)
 {
 	const struct uart_ctx *x = p->ctx;
+
+	if (NULL == x->dat)
+	{
+		return -ENODEV;
+	}
 
 	x->dat->acb = cb;
 	x->dat->aud = ud;
@@ -446,6 +456,11 @@ static int f1_uart_rx_disable(const struct uart_port *p)
 	const struct uart_ctx *x = p->ctx;
 	struct uart_dat *d = x->dat;
 	struct uart_event ev;
+
+	if (NULL == x->dat)
+	{
+		return -ENODEV;
+	}
 
 	if (NULL == d->rx_buf)
 	{
@@ -512,6 +527,11 @@ static int f1_uart_tx_abort(const struct uart_port *p)
 	const uint8_t *b;
 	uint32_t sent;
 
+	if (NULL == x->dat)
+	{
+		return -ENODEV;
+	}
+
 	if (NULL == d->tx_buf)
 	{
 		return -ENODEV;
@@ -536,18 +556,18 @@ static int f1_uart_tx_abort(const struct uart_port *p)
 }
 #endif
 
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_UART_IRQ) || defined(CONFIG_UART_DMA)
 static void f1_uart_isr(const struct uart_port *p)
 {
 	const struct uart_ctx *x = p->ctx;
 	struct uart_dat *d = x->dat;
-#ifdef CONFIG_UART_INTERRUPT_DRIVEN
+#ifdef CONFIG_UART_IRQ
 	if (NULL != d->cb)
 	{
 		d->cb(p, d->ud);
 	}
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 	if ((LL_USART_IsActiveFlag_IDLE(x->regs))
 		&& (LL_USART_IsEnabledIT_IDLE(x->regs)))
 	{
@@ -579,7 +599,7 @@ static void f1_uart_isr(const struct uart_port *p)
 }
 #endif
 
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 static void f1_uart_dma_rx_isr(const struct uart_port *p)
 {
 	const struct uart_ctx *x = p->ctx;
@@ -594,7 +614,7 @@ static const struct uart_ops f1_uart_ops =
 	.init				= f1_uart_init,
 	.poll_out			= f1_uart_poll_out,
 	.poll_in			= f1_uart_poll_in,
-#ifdef CONFIG_UART_INTERRUPT_DRIVEN
+#ifdef CONFIG_UART_IRQ
 	.fifo_fill			= f1_uart_fifo_fill,
 	.fifo_read			= f1_uart_fifo_read,
 	.irq_update			= f1_uart_irq_update,
@@ -607,7 +627,7 @@ static const struct uart_ops f1_uart_ops =
 	.irq_tx_enable		= f1_uart_irq_tx_enable,
 	.irq_rx_enable		= f1_uart_irq_rx_enable,
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 	.callback_set		= f1_uart_callback_set,
 	.tx					= f1_uart_tx,
 	.tx_abort			= f1_uart_tx_abort,
@@ -617,16 +637,16 @@ static const struct uart_ops f1_uart_ops =
 };
 
 #if defined(USART1) && defined(CONFIG_USART1)
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA)
 static struct uart_dat usart1_dat;
 #endif
 static const struct uart_ctx usart1_ctx =
 {
 	.regs		= USART1,
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA)
 	.dat		= &usart1_dat,
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_USART1_DMA
 	.rx_ch		= LL_DMA_CHANNEL_5,
 	.tx_ch		= LL_DMA_CHANNEL_4,
 #endif
@@ -637,13 +657,13 @@ const struct uart_port usart1 =
 	.ctx		= &usart1_ctx,
 	.name		= "usart1",
 };
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA)
 void USART1_IRQHandler(void)
 {
 	f1_uart_isr(&usart1);
 }
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_USART1_DMA
 void DMA1_Channel5_IRQHandler(void)
 {
 	f1_uart_dma_rx_isr(&usart1);
@@ -652,16 +672,16 @@ void DMA1_Channel5_IRQHandler(void)
 #endif	//	USART1
 
 #if defined(USART2) && defined(CONFIG_USART2)
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART2_IRQ) || defined(CONFIG_USART2_DMA)
 static struct uart_dat usart2_dat;
 #endif
 static const struct uart_ctx usart2_ctx =
 {
 	.regs		= USART2,
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART2_IRQ) || defined(CONFIG_USART2_DMA)
 	.dat		= &usart2_dat,
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_USART2_DMA
 	.rx_ch		= LL_DMA_CHANNEL_6,
 	.tx_ch		= LL_DMA_CHANNEL_7,
 #endif
@@ -672,13 +692,13 @@ const struct uart_port usart2 =
 	.ctx		= &usart2_ctx,
 	.name		= "usart2",
 };
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART2_IRQ) || defined(CONFIG_USART2_DMA)
 void USART2_IRQHandler(void)
 {
 	f1_uart_isr(&usart2);
 }
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_USART2_DMA
 void DMA1_Channel6_IRQHandler(void)
 {
 	f1_uart_dma_rx_isr(&usart2);
@@ -687,16 +707,16 @@ void DMA1_Channel6_IRQHandler(void)
 #endif	//	USART2
 
 #if defined(USART3) && defined(CONFIG_USART3)
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART3_IRQ) || defined(CONFIG_USART3_DMA)
 static struct uart_dat usart3_dat;
 #endif
 static const struct uart_ctx usart3_ctx =
 {
 	.regs		= USART3,
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART3_IRQ) || defined(CONFIG_USART3_DMA)
 	.dat		= &usart3_dat,
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_USART3_DMA
 	.rx_ch		= LL_DMA_CHANNEL_3,
 	.tx_ch		= LL_DMA_CHANNEL_2,
 #endif
@@ -707,13 +727,13 @@ const struct uart_port usart3 =
 	.ctx		= &usart3_ctx,
 	.name		= "usart3",
 };
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART3_IRQ) || defined(CONFIG_USART3_DMA)
 void USART3_IRQHandler(void)
 {
 	f1_uart_isr(&usart3);
 }
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_USART3_DMA
 void DMA1_Channel3_IRQHandler(void)
 {
 	f1_uart_dma_rx_isr(&usart3);
@@ -722,13 +742,16 @@ void DMA1_Channel3_IRQHandler(void)
 #endif	//	USART3
 
 #if defined(UART4) && defined(CONFIG_UART4)
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#ifdef CONFIG_UART4_DMA
+#error "F1 UART4 has no DMA request mapping; CONFIG_UART4_DMA is invalid on F1"
+#endif
+#ifdef CONFIG_UART4_IRQ
 static struct uart_dat uart4_dat;
 #endif
 static const struct uart_ctx uart4_ctx =
 {
 	.regs		= UART4,
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#ifdef CONFIG_UART4_IRQ
 	.dat		= &uart4_dat,
 #endif
 };
@@ -738,7 +761,7 @@ const struct uart_port uart4 =
 	.ctx		= &uart4_ctx,
 	.name		= "uart4",
 };
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#ifdef CONFIG_UART4_IRQ
 void UART4_IRQHandler(void)
 {
 	f1_uart_isr(&uart4);
@@ -747,13 +770,16 @@ void UART4_IRQHandler(void)
 #endif	//	UART4
 
 #if defined(UART5) && defined(CONFIG_UART5)
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#ifdef CONFIG_UART5_DMA
+#error "F1 UART5 has no DMA request mapping; CONFIG_UART5_DMA is invalid on F1"
+#endif
+#ifdef CONFIG_UART5_IRQ
 static struct uart_dat uart5_dat;
 #endif
 static const struct uart_ctx uart5_ctx =
 {
 	.regs		= UART5,
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#ifdef CONFIG_UART5_IRQ
 	.dat		= &uart5_dat,
 #endif
 };
@@ -763,7 +789,7 @@ const struct uart_port uart5 =
 	.ctx		= &uart5_ctx,
 	.name		= "uart5",
 };
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#ifdef CONFIG_UART5_IRQ
 void UART5_IRQHandler(void)
 {
 	f1_uart_isr(&uart5);

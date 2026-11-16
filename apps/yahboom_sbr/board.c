@@ -124,11 +124,11 @@ static const struct uart_dev con_dev =
 	.cfg	= &con_cfg,
 };
 
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA)
 static unsigned char con_rx_buf[256];
 static unsigned char con_tx_buf[256];
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_USART1_DMA
 static unsigned char con_dma_tx_buf[96];
 static unsigned char con_dma_rx_buf[64];
 #endif
@@ -136,20 +136,20 @@ static unsigned char con_dma_rx_buf[64];
 static struct tty con_tty =
 {
 	.dev		= &con_dev,
-#if defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART1_DMA)
 	.mode		= TTY_ASYNC,
-#elif defined(CONFIG_UART_INTERRUPT_DRIVEN)
+#elif defined(CONFIG_USART1_IRQ)
 	.mode		= TTY_IRQ,
 #else
 	.mode		= TTY_POLL,
 #endif
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA)
 	.rx_buf		= con_rx_buf,
 	.rx_len		= sizeof(con_rx_buf),
 	.tx_buf		= con_tx_buf,
 	.tx_len		= sizeof(con_tx_buf),
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_USART1_DMA
 	.dma_tx_buf	= con_dma_tx_buf,
 	.dma_tx_len	= sizeof(con_dma_tx_buf),
 	.dma_rx_buf	= con_dma_rx_buf,
@@ -182,7 +182,7 @@ static const struct uart_dev bt_dev =
 	.cfg	= &bt_cfg,
 };
 
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#ifdef CONFIG_UART5_IRQ
 static unsigned char bt_rx_buf[64];
 static unsigned char bt_tx_buf[512];
 #endif
@@ -190,14 +190,12 @@ static unsigned char bt_tx_buf[512];
 static struct tty bt_tty =
 {
 	.dev	= &bt_dev,
-#if defined(CONFIG_UART_ASYNC_API) && !defined(CONFIG_UART_INTERRUPT_DRIVEN)
-	#error "uart5 has no DMA support; pure async (DMA-only) mode requires CONFIG_UART_INTERRUPT_DRIVEN."
-#elif defined(CONFIG_UART_INTERRUPT_DRIVEN)
+#ifdef CONFIG_UART5_IRQ
 	.mode	= TTY_IRQ,
 #else
 	.mode	= TTY_POLL,
 #endif
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#ifdef CONFIG_UART5_IRQ
 	.rx_buf	= bt_rx_buf,
 	.rx_len	= sizeof(bt_rx_buf),
 	.tx_buf	= bt_tx_buf,

@@ -40,11 +40,11 @@
 struct uart_port;
 struct uart_pins;
 
-#ifdef CONFIG_UART_INTERRUPT_DRIVEN
+#ifdef CONFIG_UART_IRQ
 typedef void (*uart_irq_cb_t)(const struct uart_port *p, void *ud);
 #endif
 
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 
 enum uart_event_type
 {
@@ -92,7 +92,7 @@ struct uart_ops
 			const struct uart_config *cfg);
 	int  (*poll_out)(const struct uart_port *p, uint8_t c);
 	int  (*poll_in)(const struct uart_port *p, uint8_t *c);
-#ifdef CONFIG_UART_INTERRUPT_DRIVEN
+#ifdef CONFIG_UART_IRQ
 	int  (*fifo_fill)(const struct uart_port *p, const uint8_t *tx, uint32_t len);
 	int  (*fifo_read)(const struct uart_port *p, uint8_t *rx, uint32_t len);
 	int  (*irq_update)(const struct uart_port *p);
@@ -105,7 +105,7 @@ struct uart_ops
 	void (*irq_tx_enable)(const struct uart_port *p);
 	void (*irq_rx_enable)(const struct uart_port *p);
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 	int  (*callback_set)(const struct uart_port *p, uart_async_cb_t cb, void *ud);
 	int  (*tx)(const struct uart_port *p, const uint8_t *buf, uint32_t len);
 	int  (*tx_abort)(const struct uart_port *p);
@@ -132,7 +132,7 @@ void uart_poll_putc(const struct uart_port *p, uint8_t c);
 int  uart_poll_write(const struct uart_port *p, const uint8_t *buf, uint32_t len);
 int  uart_poll_getc(const struct uart_port *p, uint8_t *c);
 
-#ifdef CONFIG_UART_INTERRUPT_DRIVEN
+#ifdef CONFIG_UART_IRQ
 int  uart_fifo_fill(const struct uart_port *p, const uint8_t *tx, uint32_t len);
 int  uart_fifo_read(const struct uart_port *p, uint8_t *rx, uint32_t len);
 int  uart_irq_update(const struct uart_port *p);
@@ -146,7 +146,7 @@ void uart_irq_tx_enable(const struct uart_port *p);
 void uart_irq_rx_enable(const struct uart_port *p);
 #endif
 
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 int  uart_callback_set(const struct uart_port *p, uart_async_cb_t cb, void *ud);
 int  uart_tx(const struct uart_port *p, const uint8_t *buf, uint32_t len);
 int  uart_tx_abort(const struct uart_port *p);

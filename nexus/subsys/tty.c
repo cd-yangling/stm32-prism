@@ -38,7 +38,7 @@
 #include "pal/uart.h"
 #include "subsys/tty.h"
 
-#ifdef CONFIG_UART_INTERRUPT_DRIVEN
+#ifdef CONFIG_UART_IRQ
 static void tty_isr(const struct uart_port *p, void *ud)
 {
 	struct tty *t = ud;
@@ -93,7 +93,7 @@ static unsigned int tty_irq_write(struct tty *t, const char *buf,
 }
 #endif
 
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 static void tty_async_submit(struct tty *t)
 {
 	unsigned int n;
@@ -169,13 +169,13 @@ static unsigned int tty_async_write(struct tty *t, const char *buf,
 
 int tty_write(struct tty *t, const char *buf, unsigned int len)
 {
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 	if (TTY_ASYNC == t->mode)
 	{
 		return (int)tty_async_write(t, buf, len);
 	}
 #endif
-#ifdef CONFIG_UART_INTERRUPT_DRIVEN
+#ifdef CONFIG_UART_IRQ
 	if (TTY_IRQ == t->mode)
 	{
 		return (int)tty_irq_write(t, buf, len);
@@ -204,7 +204,7 @@ int tty_init(struct tty *t)
 		return 0;
 	}
 
-#ifdef CONFIG_UART_INTERRUPT_DRIVEN
+#ifdef CONFIG_UART_IRQ
 	if (TTY_IRQ == t->mode)
 	{
 		int r;
@@ -232,7 +232,7 @@ int tty_init(struct tty *t)
 		return 0;
 	}
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 	if (TTY_ASYNC == t->mode)
 	{
 		int r;
@@ -265,7 +265,7 @@ int tty_init(struct tty *t)
 
 int tty_getc(struct tty *t)
 {
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_UART_IRQ) || defined(CONFIG_UART_DMA)
 	if (TTY_POLL != t->mode)
 	{
 		return fifo_getc(&t->rx_que);
@@ -335,10 +335,10 @@ int tty_getline(struct tty *t, char *buf, unsigned int len)
 	return -EAGAIN;
 }
 
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_UART_IRQ) || defined(CONFIG_UART_DMA)
 int tty_idle(struct tty *t)
 {
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 	if (!t->tx_idle)
 	{
 		return 0;

@@ -1005,7 +1005,7 @@ static int cmd_stat(int argc, char *argv[])
 	bt_puts(" ts=");
 	snprintf(b, sizeof(b), "%d", turn_get_target());
 	bt_puts(b);
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_UART_IRQ) || defined(CONFIG_UART_DMA)
 	bt_puts(" rdrop=");
 	snprintf(b, sizeof(b), "%u", (unsigned)tty_rx_drop(bt));
 	bt_puts(b);

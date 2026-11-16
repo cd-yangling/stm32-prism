@@ -71,7 +71,7 @@ int uart_poll_getc(const struct uart_port *p, uint8_t *c)
 	return p->ops->poll_in(p, c);
 }
 
-#ifdef CONFIG_UART_INTERRUPT_DRIVEN
+#ifdef CONFIG_UART_IRQ
 int uart_fifo_fill(const struct uart_port *p, const uint8_t *tx, uint32_t len)
 {
 	if (NULL == p->ops->fifo_fill)
@@ -171,7 +171,7 @@ void uart_irq_rx_enable(const struct uart_port *p)
 }
 #endif
 
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 int uart_callback_set(const struct uart_port *p, uart_async_cb_t cb, void *ud)
 {
 	if (NULL == p->ops->callback_set)

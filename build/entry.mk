@@ -16,3 +16,4 @@ endif
 include $(ROOT)/build/boards/$(BOARD).mk
 include $(ROOT)/build/chips/$(CHIP).mk
 include $(ROOT)/build/series/$(CHIP_SERIES).mk
+include $(ROOT)/build/derive.mk

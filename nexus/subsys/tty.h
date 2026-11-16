@@ -37,7 +37,7 @@
 
 #include <stdint.h>
 
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_UART_IRQ) || defined(CONFIG_UART_DMA)
 #include "lib/gadget/fifo.h"
 #endif
 
@@ -56,7 +56,7 @@ struct tty
 {
 	const struct uart_dev	*dev;
 	enum tty_mode			 mode;
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_UART_IRQ) || defined(CONFIG_UART_DMA)
 	struct fifo				 rx_que;
 	unsigned char			*rx_buf;
 	unsigned int			 rx_len;
@@ -66,7 +66,7 @@ struct tty
 	uint32_t				 rx_drop;
 	uint32_t				 tx_drop;
 #endif
-#ifdef CONFIG_UART_ASYNC_API
+#ifdef CONFIG_UART_DMA
 	volatile uint32_t		 tx_idle;
 	unsigned char			*dma_tx_buf;
 	unsigned int			 dma_tx_len;
@@ -84,7 +84,7 @@ void		tty_lflag_set(struct tty *t, uint8_t bits);
 void		tty_lflag_clr(struct tty *t, uint8_t bits);
 int	tty_getc(struct tty *t);
 int	tty_getline(struct tty *t, char *buf, unsigned int len);
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
+#if defined(CONFIG_UART_IRQ) || defined(CONFIG_UART_DMA)
 int			tty_idle(struct tty *t);
 uint32_t	tty_rx_drop(struct tty *t);
 uint32_t	tty_tx_drop(struct tty *t);
