@@ -156,9 +156,52 @@ static const int32_t s_cordic_atan_tbl[14] =
 	1,     /* i=13: atan(2^-13) =  0.0070度 */
 };
 
+static int32_t cordic_gain_mag(int32_t a)
+{
+	/* 843/512 ~= 1.6465, 增益 1/K = 1.6468 的移位近似 */
+	return a + (a >> 1) + (a >> 3) + (a >> 6) + (a >> 8) + (a >> 9);
+}
+
 int32_t cordic_atan2_with_mag(int32_t y, int32_t x, int32_t *magnitude_out)
 {
 	int32_t angle = 0;
+
+	/* 零向量: 无方向, 与 lut_atan2 保持一致 返回 0 */
+	if (0 == x && 0 == y)
+	{
+		if (magnitude_out)
+		{
+			*magnitude_out = 0;
+		}
+
+		return 0;
+	}
+
+	/* 纯实轴: 直接返回 0 / 180度 */
+	if (0 == y && 0 != x)
+	{
+		int32_t ax = (x < 0) ? -x : x;
+
+		if (magnitude_out)
+		{
+			*magnitude_out = cordic_gain_mag(ax);
+		}
+
+		return (x > 0) ? ANGLE_0DEG : ANGLE_180DEG;
+	}
+
+	/* 纯虚轴: 直接返回 +/- 90度 */
+	if (0 == x && 0 != y)
+	{
+		int32_t ay = (y < 0) ? -y : y;
+
+		if (magnitude_out)
+		{
+			*magnitude_out = cordic_gain_mag(ay);
+		}
+
+		return (y > 0) ? ANGLE_90DEG : -ANGLE_90DEG;
+	}
 
 	/* ---- 象限预处理 ----
 	 * CORDIC 只在 x > 0 时收敛.
@@ -167,30 +210,9 @@ int32_t cordic_atan2_with_mag(int32_t y, int32_t x, int32_t *magnitude_out)
 	if (x < 0)
 	{
 		/* 第2, 3象限: 旋转 +/- 180度 */
-		angle = (y >= 0) ? ANGLE_180DEG : -ANGLE_180DEG;
+		angle = (y > 0) ? ANGLE_180DEG : -ANGLE_180DEG;
 		x = -x;
 		y = -y;
-	}
-	else if (x == 0)
-	{
-		/* 零向量: 无方向, 与 lut_atan2 对齐返 0 */
-		if (0 == y)
-		{
-			if (magnitude_out)
-			{
-				*magnitude_out = 0;
-			}
-
-			return 0;
-		}
-
-		/* 纯虚轴: 直接返回 +/- 90度 */
-		if (magnitude_out)
-		{
-			*magnitude_out = (y < 0) ? -y : y;
-		}
-
-		return (y >= 0) ? ANGLE_90DEG : -ANGLE_90DEG;
 	}
 
 	/* ---- CORDIC 迭代 14次 ---- */
@@ -226,6 +248,13 @@ int32_t cordic_atan2_with_mag(int32_t y, int32_t x, int32_t *magnitude_out)
 	{
 		*magnitude_out = x;
 	}
+
+	/* 迭代的过程可能导致最终结果越出 +/-18000 */
+	if (angle > ANGLE_180DEG)
+		angle = ANGLE_180DEG;	/*	例如: (y=1, x=-4) +18990*/
+
+	if (angle < -ANGLE_180DEG)
+		angle = -ANGLE_180DEG;	/*	例如: (y=-2, x=-2449) -18004*/
 
 	return angle;
 }
