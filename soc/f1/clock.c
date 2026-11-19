@@ -32,6 +32,7 @@
 
 /* Copyright (C) 2026 YangLing */
 
+#include "clock_conf.h"
 #include "stm32f1xx_ll_system.h"
 #include "stm32f1xx_ll_rcc.h"
 #include "stm32f1xx_ll_utils.h"
@@ -40,6 +41,7 @@
 #define	XCAT(a,b)	CAT(a,b)
 
 _Static_assert(HSE_VALUE * SYSCLK_PLL_MUL == SYSCLK_HZ);
+_Static_assert(SYSCLK_HZ <= RCC_MAX_FREQUENCY);
 
 #if SYSCLK_HZ > 48000000
 #define	FLASH_LAT	2
@@ -58,10 +60,15 @@ void clock_init(void)
 	LL_RCC_HSE_Enable();
 	while (!LL_RCC_HSE_IsReady()) {}
 
+	LL_RCC_PLL_Disable();
+	while (LL_RCC_PLL_IsReady()) {}
 	LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE_DIV_1,
 			XCAT(LL_RCC_PLL_MUL_, SYSCLK_PLL_MUL));
 	LL_RCC_PLL_Enable();
 	while (!LL_RCC_PLL_IsReady()) {}
+
+	LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_16);
+	LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_16);
 
 	LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
 	LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_PLL);

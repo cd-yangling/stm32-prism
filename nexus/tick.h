@@ -37,6 +37,8 @@
 
 #include <stdint.h>
 
+#include "clock_conf.h"
+
 void tick_init(void);
 
 uint32_t tick_get(void);
@@ -49,14 +51,10 @@ void delay_us(uint32_t us);
 
 void delay_cyc(uint32_t cyc);
 
-#ifdef SYSCLK_HZ
 static inline uint32_t tick_cyc_per_us(void)
 {
 	return (uint32_t)(SYSCLK_HZ / 1000000U);
 }
-#else
-uint32_t tick_cyc_per_us(void);
-#endif
 
 static inline int tick_expired(uint32_t deadline)
 {

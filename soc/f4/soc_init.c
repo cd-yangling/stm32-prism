@@ -32,13 +32,18 @@
 
 /* Copyright (C) 2026 YangLing */
 
-//#if defined(USE_HAL_DRIVER)
-//#include "stm32f4xx_hal.h"
-//#endif
-//#include "soc_early.h"
-//#include "clock.h"
-//#include "tick.h"
+#if defined(USE_HAL_DRIVER)
+#include "stm32f4xx_hal.h"
+#endif
+#include "clock.h"
+#include "tick.h"
 
 void soc_init(void)
 {
+#if defined(USE_HAL_DRIVER)
+	HAL_Init();
+#endif
+//	严禁调整 HAL_Init / clock_init / tick_init 执行顺序
+	clock_init();
+	tick_init();
 }

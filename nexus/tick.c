@@ -57,22 +57,13 @@
 
 #endif
 
-#ifdef SYSCLK_HZ
 _Static_assert(0 == SYSCLK_HZ % 1000000);
-#define	cyc_per_us	(SYSCLK_HZ / 1000000U)
-#else
-static uint32_t cyc_per_us;
-#endif
 
 static void dwt_calibrate(void)
 {
 	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
 	DWT->CYCCNT = 0;
 	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-
-#ifndef SYSCLK_HZ
-	cyc_per_us = SystemCoreClock / 1000000U;
-#endif
 }
 
 #ifdef USE_HAL_DRIVER
@@ -108,11 +99,7 @@ void SysTick_Handler(void)
 
 void tick_init(void)
 {
-#ifdef SYSCLK_HZ
 	SysTick_Config(SYSCLK_HZ / 1000U);
-#else
-	SysTick_Config(SystemCoreClock / 1000U);
-#endif
 	NVIC_SetPriority(SysTick_IRQn, IRQ_PRIO_SYSTICK);
 	dwt_calibrate();
 }
@@ -136,7 +123,7 @@ void delay_ms(uint32_t ms)
 void delay_us(uint32_t us)
 {
 	uint32_t start = DWT->CYCCNT;
-	uint32_t cycles = us * cyc_per_us;
+	uint32_t cycles = us * tick_cyc_per_us();
 
 	while ((DWT->CYCCNT - start) < cycles)
 	{
@@ -151,10 +138,3 @@ void delay_cyc(uint32_t cyc)
 	{
 	}
 }
-
-#ifndef SYSCLK_HZ
-uint32_t tick_cyc_per_us(void)
-{
-	return cyc_per_us;
-}
-#endif

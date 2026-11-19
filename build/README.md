@@ -17,11 +17,13 @@ example/Makefile (指定 BOARD)
          ├─ libc.mk              (C 标准库源码选择)
          ├─ toolchain.mk         (交叉编译工具链、编译/链接选项及 Target 规则)
          ├─ flash.mk             (OpenOCD Flash 烧录与 GDB 调试目标)
-         └─ vimdb.mk             (代码索引 tag 与 compile_commands.json 生成)
+         ├─ vimdb.mk             (代码索引 tag 与 compile_commands.json 生成)
+         └─ clkgen.mk            (时钟参数生成器，自动推导产出 objs/clock_conf.h)
 ```
 
 ## 其他模块说明
 
+- `clkgen/` + `clkgen.mk`：时钟参数生成器。`clkgen.c` 为每个系列实现时钟求解(f1_gen/f4_gen):推导 PLL 参数、校验窗口 `RCC_MAX_FREQUENCY` 等），自动推导产出 `objs/clock_conf.h` 供 C 侧 include（`tick.h`、`soc/*/clock.c`） 使用；。
 - `boot/Makefile`：独立 Bootloader 构建逻辑。跳过 `series/common.mk`，仅包含 `chips/$(CHIP).mk` 与 `offset.mk`，由 `CHIP_SERIES` 直接推导 `CPU_FLAGS`。
 - `smoke/`：构建系统本身的冒烟测试用例，用于验证多芯片/板级组合配置的正确性。
 - `ram_reset.gdb`：用于 GDB 调试 RAM 版本固件的初始化脚本（重置 PC 与 SP 指针）。
@@ -53,6 +55,8 @@ example/Makefile (指定 BOARD)
 | **板级配置** | `CHIP` | **[内部只读]** | `boards/*.mk` | - | 开发板对应芯片，严禁工程直接指定 |
 | | `HSE_FREQ` | **[内部只读]** | `boards/*.mk` | - | 板载晶振频率，自动展开为 `-DHSE_VALUE` |
 | | `BOARD_DEFS` | **[内部只读]** | `boards/*.mk` | - | 板级编译定义（自动合并 `BOARD_CONF`） |
+| **时钟链** | `SYSCLK_HZ` | 可覆盖 | 缺省由 `clkgen` 从ST的头自动生成，`boards/*.mk` / 命令行可覆盖 | - | 系统时钟（Hz），时钟链唯一配置点；非法值构建期报错 |
+| | `clock_conf.h` | **[内部只读]** | `objs/clock_conf.h`（`clkgen` 生成） | - | `SYSCLK_HZ` 与 `SYSCLK_PLL_*` 全部自动生成，**严禁手写该头** |
 | **芯片配置** | `CHIP_SERIES` | **[内部只读]** | `chips/*.mk` | - | 芯片架构系列（如 `f1`/`h7`），**严禁直接传递** |
 | | `CHIP_DEFS` | **[内部只读]** | `chips/*.mk` | - | 芯片级宏定义（芯片型号、外设 Pin 掩码） |
 | **内存与分区** | `FLASH_SIZE` / `SRAM_SIZE` | **[内部只读]** | `chips/*.mk` | - | Flash/SRAM 物理容量，供链接脚本计算 |
@@ -85,6 +89,7 @@ include ../../build/entry.mk
 make                            # 默认编译产生 firmware.elf、firmware_ram.elf 及内存使用报告
 make flash                      # 使用 OpenOCD 将固件烧录至 Flash
 make clean                      # 清理所有构建产物 (objs/ 及 *.elf/*.map)
+make distclean                  # clean + 清理 tags/cscope/compile_commands.json
 
 # Flash 磨损平衡轮换烧录 (如偏移 32KB 槽位)
 make APP_OFFSET=0x8000 flash

@@ -49,9 +49,6 @@ SERIES_DEFS = -DUSE_FULL_LL_DRIVER -DSTM32$(SERIES_UC)
 ifneq ($(USE_HAL),)
 SERIES_DEFS += -DUSE_HAL_DRIVER
 endif
-ifneq ($(SYSCLK_HZ),)
-SERIES_DEFS += -DSYSCLK_PLL_MUL=$(PLL_MUL) -DSYSCLK_HZ=$(SYSCLK_HZ)
-endif
 
 SELF_C = $(wildcard $(NEXUS)/*.c $(NEXUS)/pal/*.c \
                    $(NEXUS)/dev/*.c $(NEXUS)/subsys/*.c $(NEXUS)/lib/gadget/*.c \
@@ -61,9 +58,10 @@ C_SOURCES   = $(SYSTEM_SRC) $(DRV_C) $(PROJ_SRC) $(SELF_C)
 ASM_SOURCES = $(STARTUP_SRC)
 
 INCLUDES    = -I$(CURDIR) -I$(NEXUS) -I$(CSER) $(LIBC_INC) \
-	-I$(DRV_INC) -I$(DEV_INC) -I$(CMSIS_INC)
+	-I$(DRV_INC) -I$(DEV_INC) -I$(CMSIS_INC) -I$(BUILD_DIR)
 VIMDB_DIRS  = $(NEXUS) $(CSER) $(CMSIS_INC) $(DEV_INC) $(DRV_INC) $(DRV_SRC)
 
 include $(ROOT)/build/toolchain.mk
 include $(ROOT)/build/flash.mk
 include $(ROOT)/build/vimdb.mk
+include $(ROOT)/build/clkgen.mk
