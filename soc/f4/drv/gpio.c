@@ -34,8 +34,10 @@
 
 #include "stm32f4xx_ll_bus.h"
 #include "stm32f4xx_ll_gpio.h"
-#include <errno.h>
 #include "pal/pin.h"
+
+int exti_irq_configure(const struct pin_port *pt, uint8_t pin, uint32_t flags);
+int exti_manage_cb(const struct pin_port *pt, struct pin_callback *cb, int set);
 
 struct gpio_ctx
 {
@@ -55,26 +57,6 @@ static const uint32_t llpin[16] =
 	LL_GPIO_PIN_8,  LL_GPIO_PIN_9,  LL_GPIO_PIN_10, LL_GPIO_PIN_11,
 	LL_GPIO_PIN_12, LL_GPIO_PIN_13, LL_GPIO_PIN_14, LL_GPIO_PIN_15,
 };
-
-static int gpio_irq_configure(const struct pin_port *pt, uint8_t pin,
-	uint32_t flags)
-{
-	(void)pt;
-	(void)pin;
-	(void)flags;
-
-	return -ENOSYS;
-}
-
-static int gpio_manage_cb(const struct pin_port *pt, struct pin_callback *cb,
-	int set)
-{
-	(void)pt;
-	(void)cb;
-	(void)set;
-
-	return -ENOSYS;
-}
 
 static void gpio_configure(const struct pin_port *pt, uint8_t pin, uint32_t flags)
 {
@@ -234,8 +216,8 @@ static const struct pin_ops gpio_ops =
 	.toggle			= gpio_toggle,
 	.set			= gpio_set,
 	.get			= gpio_get,
-	.irq_configure	= gpio_irq_configure,
-	.manage_cb		= gpio_manage_cb,
+	.irq_configure	= exti_irq_configure,
+	.manage_cb		= exti_manage_cb,
 };
 
 #if defined(GPIOA_PINS) && (0 != GPIOA_PINS)

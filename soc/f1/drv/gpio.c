@@ -34,7 +34,6 @@
 
 #include "stm32f1xx_ll_bus.h"
 #include "stm32f1xx_ll_gpio.h"
-#include <errno.h>
 #include "pal/pin.h"
 
 int exti_irq_configure(const struct pin_port *pt, uint8_t pin, uint32_t flags);
