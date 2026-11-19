@@ -1,3 +1,6 @@
 BOARD      = wheeltec_f570
+BOARD_CONF = -DCONFIG_STM32_ENABLE_DEBUG_SLEEP_STOP
+BOARD_CONF+= -DCONFIG_LED
+BOARD_CONF+= -DCONFIG_BUZZER
 PROJ_SRC   = main.c board.c
 include ../../build/entry.mk

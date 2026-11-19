@@ -35,11 +35,13 @@
 #if defined(USE_HAL_DRIVER)
 #include "stm32f4xx_hal.h"
 #endif
+#include "soc_early.h"
 #include "clock.h"
 #include "tick.h"
 
 void soc_init(void)
 {
+	soc_early_init();
 #if defined(USE_HAL_DRIVER)
 	HAL_Init();
 #endif

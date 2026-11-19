@@ -32,9 +32,49 @@
 
 /* Copyright (C) 2026 YangLing */
 
+#include <stdint.h>
+#include <errno.h>
+#include "tick.h"
+#include "board.h"
+#include "pal/led.h"
+#include "pal/pin.h"
+#include "die.h"
+
+static int brd_devices_init(void)
+{
+	if (0
+		|| !board.led1
+		|| !board.led2
+		|| !board.buzzer
+		)
+	{
+		return -ENOENT;
+	}
+
+	return 0;
+}
+
 int main(void)
 {
+	const struct led_dev *led1 = board.led1;
+	const struct led_dev *led2 = board.led2;
+
+	if (brd_devices_init())
+		die();
+
+	pin_configure(board.buzzer);
+	pin_set(board.buzzer, 1);
+	delay_ms(200);
+	pin_set(board.buzzer, 0);
+
 	for (;;)
 	{
+		for (uint32_t i = 0; 500 > i; i++)
+		{
+			delay_us(1000);
+		}
+
+		led_toggle(led1);
+		led_toggle(led2);
 	}
 }

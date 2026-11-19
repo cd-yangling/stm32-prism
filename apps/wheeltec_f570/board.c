@@ -32,6 +32,51 @@
 
 /* Copyright (C) 2026 YangLing */
 
+#include <stdint.h>
+#include <stddef.h>
+#include "pal/pin.h"
+#include "pal/led.h"
+#include "board.h"
+
+#define	BOARD_C
+#include "soc.h"
+
+#if defined(CONFIG_LED)
+PIN_DESC(led_1, gpiob, 14, PIN_OUT | PIN_SPEED_LOW | PIN_ACTIVE_LOW | PIN_INIT_INACTIVE);
+PIN_DESC(led_2, gpiob, 15, PIN_OUT | PIN_SPEED_LOW | PIN_ACTIVE_LOW | PIN_INIT_INACTIVE);
+
+static const struct led_dev led1 = { .ops = &led_gpio_ops, .ctx = &led_1, .name = "led1" };
+static const struct led_dev led2 = { .ops = &led_gpio_ops, .ctx = &led_2, .name = "led2" };
+#define	BOARD_LED1	(&led1)
+#define	BOARD_LED2	(&led2)
+#else
+#define	BOARD_LED1	(NULL)
+#define	BOARD_LED2	(NULL)
+#endif
+
+#if defined(CONFIG_BUZZER)
+PIN_DESC(buzzer, gpioa, 4, PIN_OUT | PIN_SPEED_LOW | PIN_INIT_INACTIVE);
+#define	BOARD_BUZZER	(&buzzer)
+#else
+#define	BOARD_BUZZER	(NULL)
+#endif
+
+static void brd_led_init(void)
+{
+#if defined(CONFIG_LED)
+	led_init(&led1);
+	led_init(&led2);
+#endif
+}
+
+const struct board board =
+{
+	.led1	= BOARD_LED1,
+	.led2	= BOARD_LED2,
+	.buzzer	= BOARD_BUZZER,
+};
+
 void brd_init(void)
 {
+	brd_led_init();
 }
