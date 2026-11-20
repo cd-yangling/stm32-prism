@@ -36,6 +36,8 @@
 #include <stddef.h>
 #include "pal/pin.h"
 #include "pal/led.h"
+#include "pal/uart.h"
+#include "subsys/tty.h"
 #include "board.h"
 
 #define	BOARD_C
@@ -61,6 +63,71 @@ PIN_DESC(buzzer, gpioa, 4, PIN_OUT | PIN_SPEED_LOW | PIN_INIT_INACTIVE);
 #define	BOARD_BUZZER	(NULL)
 #endif
 
+#if defined(CONFIG_USART1)
+PIN_DESC(usart1_tx, gpioa, 9,  PIN_ALT | PIN_MUX(7) | PIN_SPEED_VERY_HIGH);
+PIN_DESC(usart1_rx, gpioa, 10, PIN_ALT | PIN_MUX(7));
+static const struct uart_pins usart1_pins =
+{
+	.tx	= &usart1_tx,
+	.rx	= &usart1_rx,
+};
+static const struct uart_config con_cfg =
+{
+	.baud = 1152000,
+	.data_bits = 8,
+	.parity = 0,
+	.stop_bits = 1,
+};
+static const struct uart_dev con_dev =
+{
+	.port	= &usart1,
+	.cfg	= &con_cfg,
+};
+
+#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA)
+static unsigned char con_rx_buf[256];
+static unsigned char con_tx_buf[256];
+#endif
+#ifdef CONFIG_USART1_DMA
+static unsigned char con_dma_tx_buf[96];
+static unsigned char con_dma_rx_buf[64];
+#endif
+
+static struct tty con_tty =
+{
+	.dev		= &con_dev,
+#if defined(CONFIG_USART1_DMA)
+	.mode		= TTY_ASYNC,
+#elif defined(CONFIG_USART1_IRQ)
+	.mode		= TTY_IRQ,
+#else
+	.mode		= TTY_POLL,
+#endif
+#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA)
+	.rx_buf		= con_rx_buf,
+	.rx_len		= sizeof(con_rx_buf),
+	.tx_buf		= con_tx_buf,
+	.tx_len		= sizeof(con_tx_buf),
+#endif
+#ifdef CONFIG_USART1_DMA
+	.dma_tx_buf	= con_dma_tx_buf,
+	.dma_tx_len	= sizeof(con_dma_tx_buf),
+	.dma_rx_buf	= con_dma_rx_buf,
+	.dma_rx_len	= sizeof(con_dma_rx_buf),
+#endif
+};
+#define	BOARD_CONSOLE	(&con_tty)
+#else
+#define	BOARD_CONSOLE	(NULL)
+#endif
+
+static void brd_uart_init(void)
+{
+#if defined(CONFIG_USART1)
+	uart_dev_init(&con_dev, &usart1_pins);
+#endif
+}
+
 static void brd_led_init(void)
 {
 #if defined(CONFIG_LED)
@@ -71,12 +138,14 @@ static void brd_led_init(void)
 
 const struct board board =
 {
-	.led1	= BOARD_LED1,
-	.led2	= BOARD_LED2,
-	.buzzer	= BOARD_BUZZER,
+	.led1		= BOARD_LED1,
+	.led2		= BOARD_LED2,
+	.buzzer		= BOARD_BUZZER,
+	.console	= BOARD_CONSOLE,
 };
 
 void brd_init(void)
 {
 	brd_led_init();
+	brd_uart_init();
 }

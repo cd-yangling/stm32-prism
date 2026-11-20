@@ -39,6 +39,7 @@
 #error	"soc.h: board.c only; consumers use board.h"
 #endif
 
+struct uart_port;
 struct pin_port;
 
 #if defined(GPIOA_PINS) && (0 != GPIOA_PINS)
@@ -60,6 +61,36 @@ extern const struct pin_port gpiod_port;
 #if defined(GPIOH_PINS) && (0 != GPIOH_PINS)
 #define	gpioh_PINS	GPIOH_PINS
 extern const struct pin_port gpioh_port;
+#endif
+#if defined(CONFIG_USART1)
+extern const struct uart_port usart1;
+#endif
+#if defined(CONFIG_USART2)
+extern const struct uart_port usart2;
+#endif
+#if defined(CONFIG_USART3)
+extern const struct uart_port usart3;
+#endif
+#if defined(CONFIG_UART4)
+extern const struct uart_port uart4;
+#endif
+#if defined(CONFIG_UART5)
+extern const struct uart_port uart5;
+#endif
+#if defined(CONFIG_USART6)
+extern const struct uart_port usart6;
+#endif
+#if defined(CONFIG_UART7)
+extern const struct uart_port uart7;
+#endif
+#if defined(CONFIG_UART8)
+extern const struct uart_port uart8;
+#endif
+#if defined(CONFIG_UART9)
+extern const struct uart_port uart9;
+#endif
+#if defined(CONFIG_UART10)
+extern const struct uart_port uart10;
 #endif
 
 #endif	//	__SOC_F4_INSTANCES_HEADER__

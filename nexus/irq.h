@@ -74,15 +74,15 @@
 #endif
 
 #ifndef	IRQ_PRIO_USART1
-#define	IRQ_PRIO_USART1	IRQ_PRIO_UART
+#define	IRQ_PRIO_USART1		IRQ_PRIO_UART
 #endif
 
 #ifndef	IRQ_PRIO_USART2
-#define	IRQ_PRIO_USART2	IRQ_PRIO_UART
+#define	IRQ_PRIO_USART2		IRQ_PRIO_UART
 #endif
 
 #ifndef	IRQ_PRIO_USART3
-#define	IRQ_PRIO_USART3	IRQ_PRIO_UART
+#define	IRQ_PRIO_USART3		IRQ_PRIO_UART
 #endif
 
 #ifndef	IRQ_PRIO_UART4
@@ -91,6 +91,26 @@
 
 #ifndef	IRQ_PRIO_UART5
 #define	IRQ_PRIO_UART5		IRQ_PRIO_UART
+#endif
+
+#ifndef	IRQ_PRIO_USART6
+#define	IRQ_PRIO_USART6		IRQ_PRIO_UART
+#endif
+
+#ifndef	IRQ_PRIO_UART7
+#define	IRQ_PRIO_UART7		IRQ_PRIO_UART
+#endif
+
+#ifndef	IRQ_PRIO_UART8
+#define	IRQ_PRIO_UART8		IRQ_PRIO_UART
+#endif
+
+#ifndef	IRQ_PRIO_UART9
+#define	IRQ_PRIO_UART9		IRQ_PRIO_UART
+#endif
+
+#ifndef	IRQ_PRIO_UART10
+#define	IRQ_PRIO_UART10		IRQ_PRIO_UART
 #endif
 
 static inline unsigned int irq_lock(void)

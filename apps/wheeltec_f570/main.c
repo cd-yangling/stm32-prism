@@ -33,23 +33,37 @@
 /* Copyright (C) 2026 YangLing */
 
 #include <stdint.h>
+#include <stdio.h>
 #include <errno.h>
 #include "tick.h"
 #include "board.h"
+#include "subsys/tty.h"
+#include "subsys/console.h"
 #include "pal/led.h"
 #include "pal/pin.h"
 #include "die.h"
 
 static int brd_devices_init(void)
 {
+	int ret;
+
 	if (0
 		|| !board.led1
 		|| !board.led2
 		|| !board.buzzer
+		|| !board.console
 		)
 	{
 		return -ENOENT;
 	}
+
+	ret = tty_init(board.console);
+	if (0 != ret)
+		return ret;
+
+	ret = console_attach(board.console);
+	if (0 != ret)
+		return ret;
 
 	return 0;
 }
@@ -66,6 +80,27 @@ int main(void)
 	pin_set(board.buzzer, 1);
 	delay_ms(200);
 	pin_set(board.buzzer, 0);
+
+	printf("wheeltec f570 console up\r\n");
+
+	for (;;)
+	{
+		int c = tty_getc(board.console);
+
+		if (0 > c)
+		{
+			continue;
+		}
+
+		char b = (char)c;
+
+		tty_write(board.console, &b, 1u);
+
+		if ('y' == c)
+		{
+			break;
+		}
+	}
 
 	for (;;)
 	{

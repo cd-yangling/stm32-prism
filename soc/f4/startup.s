@@ -106,6 +106,14 @@ g_pfnVectors:
     .word 0
     .word HASH_RNG_IRQHandler
     .word FPU_IRQHandler
+    .word UART7_IRQHandler
+    .word UART8_IRQHandler
+    .word 0
+    .word 0
+    .word 0
+    .word 0
+    .word UART9_IRQHandler
+    .word UART10_IRQHandler
 
     .section .text
     .thumb_func
@@ -241,3 +249,7 @@ Default_Handler:
     WEAK OTG_HS_IRQHandler
     WEAK HASH_RNG_IRQHandler
     WEAK FPU_IRQHandler
+    WEAK UART7_IRQHandler
+    WEAK UART8_IRQHandler
+    WEAK UART9_IRQHandler
+    WEAK UART10_IRQHandler

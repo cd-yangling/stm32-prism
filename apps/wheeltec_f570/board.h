@@ -37,12 +37,14 @@
 
 struct led_dev;
 struct pin_desc;
+struct tty;
 
 struct board
 {
 	const struct led_dev	*led1;
 	const struct led_dev	*led2;
 	const struct pin_desc	*buzzer;
+	struct tty		*console;
 };
 
 extern const struct board board;
