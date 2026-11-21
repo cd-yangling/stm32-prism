@@ -39,28 +39,18 @@
 #error	"soc.h: board.c only; consumers use board.h"
 #endif
 
+struct i2c_bus;
 struct uart_port;
 struct pin_port;
 
-#if defined(GPIOA_PINS) && (0 != GPIOA_PINS)
-#define	gpioa_PINS	GPIOA_PINS
-extern const struct pin_port gpioa_port;
+#if defined(CONFIG_I2C1)
+extern const struct i2c_bus i2c1;
 #endif
-#if defined(GPIOB_PINS) && (0 != GPIOB_PINS)
-#define	gpiob_PINS	GPIOB_PINS
-extern const struct pin_port gpiob_port;
+#if defined(CONFIG_I2C2)
+extern const struct i2c_bus i2c2;
 #endif
-#if defined(GPIOC_PINS) && (0 != GPIOC_PINS)
-#define	gpioc_PINS	GPIOC_PINS
-extern const struct pin_port gpioc_port;
-#endif
-#if defined(GPIOD_PINS) && (0 != GPIOD_PINS)
-#define	gpiod_PINS	GPIOD_PINS
-extern const struct pin_port gpiod_port;
-#endif
-#if defined(GPIOH_PINS) && (0 != GPIOH_PINS)
-#define	gpioh_PINS	GPIOH_PINS
-extern const struct pin_port gpioh_port;
+#if defined(CONFIG_I2C3)
+extern const struct i2c_bus i2c3;
 #endif
 #if defined(CONFIG_USART1)
 extern const struct uart_port usart1;
@@ -91,6 +81,27 @@ extern const struct uart_port uart9;
 #endif
 #if defined(CONFIG_UART10)
 extern const struct uart_port uart10;
+#endif
+
+#if defined(GPIOA_PINS) && (0 != GPIOA_PINS)
+#define	gpioa_PINS	GPIOA_PINS
+extern const struct pin_port gpioa_port;
+#endif
+#if defined(GPIOB_PINS) && (0 != GPIOB_PINS)
+#define	gpiob_PINS	GPIOB_PINS
+extern const struct pin_port gpiob_port;
+#endif
+#if defined(GPIOC_PINS) && (0 != GPIOC_PINS)
+#define	gpioc_PINS	GPIOC_PINS
+extern const struct pin_port gpioc_port;
+#endif
+#if defined(GPIOD_PINS) && (0 != GPIOD_PINS)
+#define	gpiod_PINS	GPIOD_PINS
+extern const struct pin_port gpiod_port;
+#endif
+#if defined(GPIOH_PINS) && (0 != GPIOH_PINS)
+#define	gpioh_PINS	GPIOH_PINS
+extern const struct pin_port gpioh_port;
 #endif
 
 #endif	//	__SOC_F4_INSTANCES_HEADER__
