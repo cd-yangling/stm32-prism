@@ -41,6 +41,7 @@
 #include "subsys/console.h"
 #include "pal/led.h"
 #include "pal/pin.h"
+#include "pal/sensor.h"
 #include "die.h"
 
 static int brd_devices_init(void)
@@ -51,6 +52,7 @@ static int brd_devices_init(void)
 		|| !board.led1
 		|| !board.led2
 		|| !board.buzzer
+		|| !board.vbat_sen
 		|| !board.console
 		)
 	{
@@ -72,6 +74,7 @@ int main(void)
 {
 	const struct led_dev *led1 = board.led1;
 	const struct led_dev *led2 = board.led2;
+	struct sensor_value sv;
 
 	if (brd_devices_init())
 		die();
@@ -82,6 +85,15 @@ int main(void)
 	pin_set(board.buzzer, 0);
 
 	printf("wheeltec f570 console up\r\n");
+
+	sensor_init(board.vbat_sen);
+	for (uint8_t i = 0u; 10u > i; i++)
+	{
+		sensor_sample_fetch(board.vbat_sen);
+		sensor_channel_get(board.vbat_sen, SENSOR_CHAN_VOLTAGE, &sv);
+		printf("vbat=%dmV\r\n", sv.val1 * 1000 + sv.val2 / 1000);
+		delay_ms(500);
+	}
 
 	for (;;)
 	{

@@ -37,6 +37,7 @@
 
 struct led_dev;
 struct pin_desc;
+struct sensor;
 struct tty;
 
 struct board
@@ -44,7 +45,8 @@ struct board
 	const struct led_dev	*led1;
 	const struct led_dev	*led2;
 	const struct pin_desc	*buzzer;
-	struct tty		*console;
+	const struct sensor		*vbat_sen;
+	struct tty				*console;
 };
 
 extern const struct board board;

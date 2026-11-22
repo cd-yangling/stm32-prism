@@ -42,6 +42,7 @@
 struct i2c_bus;
 struct uart_port;
 struct pin_port;
+struct adc_dev;
 
 #if defined(CONFIG_I2C1)
 extern const struct i2c_bus i2c1;
@@ -81,6 +82,16 @@ extern const struct uart_port uart9;
 #endif
 #if defined(CONFIG_UART10)
 extern const struct uart_port uart10;
+#endif
+
+#if defined(CONFIG_ADC1)
+extern const struct adc_dev adc1;
+#endif
+#if defined(CONFIG_ADC2)
+extern const struct adc_dev adc2;
+#endif
+#if defined(CONFIG_ADC3)
+extern const struct adc_dev adc3;
 #endif
 
 #if defined(GPIOA_PINS) && (0 != GPIOA_PINS)

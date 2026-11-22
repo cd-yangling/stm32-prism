@@ -37,6 +37,8 @@
 #include "pal/pin.h"
 #include "pal/led.h"
 #include "pal/uart.h"
+#include "pal/sensor.h"
+#include "dev/voltage_divider.h"
 #include "subsys/tty.h"
 #include "board.h"
 
@@ -128,6 +130,27 @@ static void brd_uart_init(void)
 #endif
 }
 
+#if defined(CONFIG_VOLTAGE_DIVIDER)
+VOLTAGE_DIVIDER_DAT(vdiv_dat);
+static const struct voltage_divider_dev vdiv_dev =
+{
+	.adc			= &adc1,
+	.ch				= 7u,
+	.full_ohms		= 11000u,
+	.output_ohms	= 1000u,
+	.dat			= vdiv_dat,
+};
+static const struct sensor vbat_sen =
+{
+	.ops	= &voltage_divider_sensor_ops,
+	.ctx	= &vdiv_dev,
+	.name	= "vbat_sen",
+};
+#define	BOARD_VBAT_SEN	(&vbat_sen)
+#else
+#define	BOARD_VBAT_SEN	(NULL)
+#endif
+
 static void brd_led_init(void)
 {
 #if defined(CONFIG_LED)
@@ -141,6 +164,7 @@ const struct board board =
 	.led1		= BOARD_LED1,
 	.led2		= BOARD_LED2,
 	.buzzer		= BOARD_BUZZER,
+	.vbat_sen	= BOARD_VBAT_SEN,
 	.console	= BOARD_CONSOLE,
 };
 
