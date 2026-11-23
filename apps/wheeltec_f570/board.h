@@ -46,6 +46,7 @@ struct board
 	const struct led_dev	*led2;
 	const struct pin_desc	*buzzer;
 	const struct sensor		*vbat_sen;
+	const struct sensor		*imu;
 	struct tty				*console;
 };
 

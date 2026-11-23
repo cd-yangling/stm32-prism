@@ -157,40 +157,6 @@ static int mpu6050_sample_fetch(const struct sensor *s)
 	return 0;
 }
 
-//	按 芯片轴向 -> 逻辑轴向 映射表 将三元组翻译成逻辑轴向 x/y/z
-static void mpu6050_map_axes(int16_t v[3], const struct mpu6050_axis_map *mp)
-{
-	int16_t s[3] = { v[0], v[1], v[2] };
-	int16_t temp;
-
-	//	x
-	temp = s[mp->x.src];
-	v[0] = (mp->x.neg) ? (int16_t)-temp : temp;
-
-	//	y
-	temp = s[mp->y.src];
-	v[1] = (mp->y.neg) ? (int16_t)-temp : temp;
-
-	//	z
-	temp = s[mp->z.src];
-	v[2] = (mp->z.neg) ? (int16_t)-temp : temp;
-}
-
-//	逆映射: 逻辑轴向三元组换回芯片通道
-static void mpu6050_unmap_axes(int16_t v[3], const struct mpu6050_axis_map *mp)
-{
-	int16_t s[3] = { v[0], v[1], v[2] };
-
-	//	x
-	v[mp->x.src] = (mp->x.neg) ? (int16_t)-s[0] : s[0];
-
-	//	y
-	v[mp->y.src] = (mp->y.neg) ? (int16_t)-s[1] : s[1];
-
-	//	z
-	v[mp->z.src] = (mp->z.neg) ? (int16_t)-s[2] : s[2];
-}
-
 /**
  *	SMULL 方法 + 移位
  *
@@ -282,8 +248,8 @@ static int mpu6050_channel_get(const struct sensor *s, enum sensor_chan sc, stru
 
 	if (NULL != m->axis_map)
 	{
-		mpu6050_map_axes(a, m->axis_map);
-		mpu6050_map_axes(g, m->axis_map);
+		sensor_imu_map_axes(a, m->axis_map);
+		sensor_imu_map_axes(g, m->axis_map);
 	}
 
 	switch (sc)
@@ -344,8 +310,8 @@ static int mpu6050_channel_get_raw(const struct sensor *s, enum sensor_chan sc, 
 
 	if (NULL != m->axis_map)
 	{
-		mpu6050_map_axes(a, m->axis_map);
-		mpu6050_map_axes(g, m->axis_map);
+		sensor_imu_map_axes(a, m->axis_map);
+		sensor_imu_map_axes(g, m->axis_map);
 	}
 
 	switch (sc)
@@ -507,7 +473,7 @@ static int mpu6050_attr_set_raw(const struct sensor *s, enum sensor_chan sc,
 
 		if (NULL != m->axis_map)
 		{
-			mpu6050_unmap_axes(v, m->axis_map);
+			sensor_imu_unmap_axes(v, m->axis_map);
 		}
 
 		if (SENSOR_CHAN_GYRO_XYZ == sc)

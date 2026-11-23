@@ -143,6 +143,62 @@ struct sensor_trigger
 typedef void (*sensor_trigger_handler_t)(const struct sensor *s,
 					const struct sensor_trigger *trig);
 
+/*
+ * 参考 (https://en.wikipedia.org/wiki/Axes_conventions)
+ * 参考 (https://www.mathworks.com/help/uav/ug/coordinate-systems-in-uav-toolbox.html)
+ * 参考 (https://px4.gitbook.io/px4-user-guide/robotics/ros/ros1/external_position_estimation)
+ *
+ * IMU 逻辑轴向定义
+ *
+ * x箭头指向 = 前方
+ * y箭头指向 = 右方
+ * z箭头指向 = 下方
+ *
+ * 右手定则: 右手拇指指向某个轴的正方向, 四指弯曲的方向就是绕该轴旋转的正方向
+ *
+ * 姿态角约定
+ *
+ * pitch(俯仰): 抬头为正,低头为负
+ *   yaw(偏航): 向右转为正,向左转为负
+ *  roll(横滚): 肩膀(左高右低为正) 肩膀(左低右高为负)
+ *
+ * 逻辑轴向与芯片的物理安装无关
+ * 驱动出口保证输出即此轴序, 后续所有的算法一律按逻辑轴向编码
+ *
+ * 芯片轴向 -> 逻辑轴向 映射表
+ *
+ * axis_map = NULL 芯片轴向 = 逻辑轴向 x/y/z 直出, 不做映射
+ */
+#define	SENSOR_IMU_AXIS_X	0u
+#define	SENSOR_IMU_AXIS_Y	1u
+#define	SENSOR_IMU_AXIS_Z	2u
+struct sensor_imu_axis_map
+{
+	struct
+	{
+		uint8_t	src;	//	取芯片轴向哪个通道 SENSOR_IMU_AXIS_*
+		uint8_t	neg;	//	非0 表示取反
+	} x, y, z;
+};
+
+//	芯片 x = 载体右方
+//	芯片 y = 载体前方
+//	芯片 z = 载体上方
+#define	SENSOR_IMU_AXIS_MAP_XRIGHT_YFRONT_ZUP_INIT	{	\
+	.x = { .src = SENSOR_IMU_AXIS_Y, .neg = 0 },	\
+	.y = { .src = SENSOR_IMU_AXIS_X, .neg = 0 },	\
+	.z = { .src = SENSOR_IMU_AXIS_Z, .neg = 1 }	\
+}
+
+//	芯片 x = 载体前方
+//	芯片 y = 载体左方
+//	芯片 z = 载体上方
+#define	SENSOR_IMU_AXIS_MAP_XFRONT_YLEFT_ZUP_INIT	{	\
+	.x = { .src = SENSOR_IMU_AXIS_X, .neg = 0 },	\
+	.y = { .src = SENSOR_IMU_AXIS_Y, .neg = 1 },	\
+	.z = { .src = SENSOR_IMU_AXIS_Z, .neg = 1 }	\
+}
+
 struct sensor_ops
 {
 	int (*init)(const struct sensor *s);
@@ -175,5 +231,7 @@ int sensor_attr_set_raw(const struct sensor *s, enum sensor_chan sc,
 	enum sensor_attr attr, const struct sensor_raw_value *srv);
 int sensor_submit(const struct sensor *s);
 int sensor_poll(const struct sensor *s);
+void sensor_imu_map_axes(int16_t v[3], const struct sensor_imu_axis_map *mp);
+void sensor_imu_unmap_axes(int16_t v[3], const struct sensor_imu_axis_map *mp);
 
 #endif	//	__NEXUS_PAL_SENSOR_HEADER__

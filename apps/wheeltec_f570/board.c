@@ -38,7 +38,9 @@
 #include "pal/led.h"
 #include "pal/uart.h"
 #include "pal/sensor.h"
+#include "pal/i2c.h"
 #include "dev/voltage_divider.h"
+#include "dev/icm20948.h"
 #include "subsys/tty.h"
 #include "board.h"
 
@@ -75,7 +77,7 @@ static const struct uart_pins usart1_pins =
 };
 static const struct uart_config con_cfg =
 {
-	.baud = 1152000,
+	.baud = 256000,
 	.data_bits = 8,
 	.parity = 0,
 	.stop_bits = 1,
@@ -130,6 +132,23 @@ static void brd_uart_init(void)
 #endif
 }
 
+#if defined(CONFIG_I2C1)
+PIN_DESC(i2c1_scl, gpiob, 6, PIN_ALT | PIN_MUX(4) | PIN_OD | PIN_SPEED_VERY_HIGH);
+PIN_DESC(i2c1_sda, gpiob, 7, PIN_ALT | PIN_MUX(4) | PIN_OD | PIN_SPEED_VERY_HIGH);
+static const struct i2c_pins i2c1_pins =
+{
+	.scl	= &i2c1_scl,
+	.sda	= &i2c1_sda,
+};
+#endif
+
+static void brd_i2c_init(void)
+{
+#if defined(CONFIG_I2C1)
+	i2c_bus_init(&i2c1, &i2c1_pins);
+#endif
+}
+
 #if defined(CONFIG_VOLTAGE_DIVIDER)
 VOLTAGE_DIVIDER_DAT(vdiv_dat);
 static const struct voltage_divider_dev vdiv_dev =
@@ -151,6 +170,38 @@ static const struct sensor vbat_sen =
 #define	BOARD_VBAT_SEN	(NULL)
 #endif
 
+#if defined(CONFIG_ICM20948)
+ICM20948_DAT(imu1_dat);
+static const struct i2c_dev imu1 =
+{
+	.bus	= &i2c1,
+	.addr7	= 0x68u,
+	.spd_hz	= 400000u,
+};
+static const struct sensor_imu_axis_map imu1_axis_map = SENSOR_IMU_AXIS_MAP_XRIGHT_YFRONT_ZUP_INIT;
+static const struct icm20948_dev imu1_dev =
+{
+	.i2c				= &imu1,
+	.gyro_smplrt_div	= 4u,
+	.accel_smplrt_div	= 4u,
+	.gyro_dlpf_cfg		= 3u,
+	.accel_dlpf_cfg		= 5u,
+	.gfs_sel			= 3u,
+	.afs_sel			= 0u,
+	.dat				= imu1_dat,
+	.axis_map			= &imu1_axis_map,
+};
+static const struct sensor imu_sen =
+{
+	.ops	= &icm20948_sensor_ops,
+	.ctx	= &imu1_dev,
+	.name	= "imu_sen",
+};
+#define	BOARD_IMU	(&imu_sen)
+#else
+#define	BOARD_IMU	(NULL)
+#endif
+
 static void brd_led_init(void)
 {
 #if defined(CONFIG_LED)
@@ -165,6 +216,7 @@ const struct board board =
 	.led2		= BOARD_LED2,
 	.buzzer		= BOARD_BUZZER,
 	.vbat_sen	= BOARD_VBAT_SEN,
+	.imu		= BOARD_IMU,
 	.console	= BOARD_CONSOLE,
 };
 
@@ -172,4 +224,5 @@ void brd_init(void)
 {
 	brd_led_init();
 	brd_uart_init();
+	brd_i2c_init();
 }

@@ -98,3 +98,35 @@ int sensor_poll(const struct sensor *s)
 	return s->ops->poll(s);
 }
 
+void sensor_imu_map_axes(int16_t v[3], const struct sensor_imu_axis_map *mp)
+{
+	int16_t s[3] = { v[0], v[1], v[2] };
+	int16_t temp;
+
+	//	x
+	temp = s[mp->x.src];
+	v[0] = (mp->x.neg) ? (int16_t)-temp : temp;
+
+	//	y
+	temp = s[mp->y.src];
+	v[1] = (mp->y.neg) ? (int16_t)-temp : temp;
+
+	//	z
+	temp = s[mp->z.src];
+	v[2] = (mp->z.neg) ? (int16_t)-temp : temp;
+}
+
+void sensor_imu_unmap_axes(int16_t v[3], const struct sensor_imu_axis_map *mp)
+{
+	int16_t s[3] = { v[0], v[1], v[2] };
+
+	//	x
+	v[mp->x.src] = (mp->x.neg) ? (int16_t)-s[0] : s[0];
+
+	//	y
+	v[mp->y.src] = (mp->y.neg) ? (int16_t)-s[1] : s[1];
+
+	//	z
+	v[mp->z.src] = (mp->z.neg) ? (int16_t)-s[2] : s[2];
+}
+
