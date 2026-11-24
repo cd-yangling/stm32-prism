@@ -101,7 +101,7 @@ static int f1_uart_init(const struct uart_port *p, const struct uart_pins *pins,
 		}
 		LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART1);
 		pclk = rcc_clock.PCLK2_Frequency;
-#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA)
+#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA) || defined(CONFIG_USART1_DMA_RX) || defined(CONFIG_USART1_DMA_TX)
 		NVIC_SetPriority(USART1_IRQn, IRQ_PRIO_USART1);
 		NVIC_EnableIRQ(USART1_IRQn);
 #endif
@@ -115,7 +115,7 @@ static int f1_uart_init(const struct uart_port *p, const struct uart_pins *pins,
 		}
 		LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART2);
 		pclk = rcc_clock.PCLK1_Frequency;
-#if defined(CONFIG_USART2_IRQ) || defined(CONFIG_USART2_DMA)
+#if defined(CONFIG_USART2_IRQ) || defined(CONFIG_USART2_DMA) || defined(CONFIG_USART2_DMA_RX) || defined(CONFIG_USART2_DMA_TX)
 		NVIC_SetPriority(USART2_IRQn, IRQ_PRIO_USART2);
 		NVIC_EnableIRQ(USART2_IRQn);
 #endif
@@ -129,7 +129,7 @@ static int f1_uart_init(const struct uart_port *p, const struct uart_pins *pins,
 		}
 		LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART3);
 		pclk = rcc_clock.PCLK1_Frequency;
-#if defined(CONFIG_USART3_IRQ) || defined(CONFIG_USART3_DMA)
+#if defined(CONFIG_USART3_IRQ) || defined(CONFIG_USART3_DMA) || defined(CONFIG_USART3_DMA_RX) || defined(CONFIG_USART3_DMA_TX)
 		NVIC_SetPriority(USART3_IRQn, IRQ_PRIO_USART3);
 		NVIC_EnableIRQ(USART3_IRQn);
 #endif
@@ -620,21 +620,25 @@ static const struct uart_ops f1_uart_ops =
 };
 
 #if defined(USART1) && defined(CONFIG_USART1)
-#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA)
+#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA) || defined(CONFIG_USART1_DMA_RX) || defined(CONFIG_USART1_DMA_TX)
 static struct uart_dat usart1_dat;
 #endif
-#ifdef CONFIG_USART1_DMA
+#if defined(CONFIG_USART1_DMA) || defined(CONFIG_USART1_DMA_RX)
 DMA1_CHAN_OWN(5, &USART1->DR, DMA_DIR_PERIPH_TO_MEM, DMA_WIDTH_U8, IRQ_PRIO_USART1);
+#endif
+#if defined(CONFIG_USART1_DMA) || defined(CONFIG_USART1_DMA_TX)
 DMA1_CHAN_OWN(4, &USART1->DR, DMA_DIR_MEM_TO_PERIPH, DMA_WIDTH_U8, IRQ_PRIO_USART1);
 #endif
 static const struct uart_ctx usart1_ctx =
 {
 	.regs		= USART1,
-#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA)
+#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA) || defined(CONFIG_USART1_DMA_RX) || defined(CONFIG_USART1_DMA_TX)
 	.dat		= &usart1_dat,
 #endif
-#ifdef CONFIG_USART1_DMA
+#if defined(CONFIG_USART1_DMA) || defined(CONFIG_USART1_DMA_RX)
 	.rx_dma		= &dma1_ch5,
+#endif
+#if defined(CONFIG_USART1_DMA) || defined(CONFIG_USART1_DMA_TX)
 	.tx_dma		= &dma1_ch4,
 #endif
 };
@@ -644,7 +648,7 @@ const struct uart_port usart1 =
 	.ctx		= &usart1_ctx,
 	.name		= "usart1",
 };
-#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA)
+#if defined(CONFIG_USART1_IRQ) || defined(CONFIG_USART1_DMA) || defined(CONFIG_USART1_DMA_RX) || defined(CONFIG_USART1_DMA_TX)
 void USART1_IRQHandler(void)
 {
 	f1_uart_isr(&usart1);
@@ -653,21 +657,25 @@ void USART1_IRQHandler(void)
 #endif	//	USART1
 
 #if defined(USART2) && defined(CONFIG_USART2)
-#if defined(CONFIG_USART2_IRQ) || defined(CONFIG_USART2_DMA)
+#if defined(CONFIG_USART2_IRQ) || defined(CONFIG_USART2_DMA) || defined(CONFIG_USART2_DMA_RX) || defined(CONFIG_USART2_DMA_TX)
 static struct uart_dat usart2_dat;
 #endif
-#ifdef CONFIG_USART2_DMA
+#if defined(CONFIG_USART2_DMA) || defined(CONFIG_USART2_DMA_RX)
 DMA1_CHAN_OWN(6, &USART2->DR, DMA_DIR_PERIPH_TO_MEM, DMA_WIDTH_U8, IRQ_PRIO_USART2);
+#endif
+#if defined(CONFIG_USART2_DMA) || defined(CONFIG_USART2_DMA_TX)
 DMA1_CHAN_OWN(7, &USART2->DR, DMA_DIR_MEM_TO_PERIPH, DMA_WIDTH_U8, IRQ_PRIO_USART2);
 #endif
 static const struct uart_ctx usart2_ctx =
 {
 	.regs		= USART2,
-#if defined(CONFIG_USART2_IRQ) || defined(CONFIG_USART2_DMA)
+#if defined(CONFIG_USART2_IRQ) || defined(CONFIG_USART2_DMA) || defined(CONFIG_USART2_DMA_RX) || defined(CONFIG_USART2_DMA_TX)
 	.dat		= &usart2_dat,
 #endif
-#ifdef CONFIG_USART2_DMA
+#if defined(CONFIG_USART2_DMA) || defined(CONFIG_USART2_DMA_RX)
 	.rx_dma		= &dma1_ch6,
+#endif
+#if defined(CONFIG_USART2_DMA) || defined(CONFIG_USART2_DMA_TX)
 	.tx_dma		= &dma1_ch7,
 #endif
 };
@@ -677,7 +685,7 @@ const struct uart_port usart2 =
 	.ctx		= &usart2_ctx,
 	.name		= "usart2",
 };
-#if defined(CONFIG_USART2_IRQ) || defined(CONFIG_USART2_DMA)
+#if defined(CONFIG_USART2_IRQ) || defined(CONFIG_USART2_DMA) || defined(CONFIG_USART2_DMA_RX) || defined(CONFIG_USART2_DMA_TX)
 void USART2_IRQHandler(void)
 {
 	f1_uart_isr(&usart2);
@@ -686,21 +694,25 @@ void USART2_IRQHandler(void)
 #endif	//	USART2
 
 #if defined(USART3) && defined(CONFIG_USART3)
-#if defined(CONFIG_USART3_IRQ) || defined(CONFIG_USART3_DMA)
+#if defined(CONFIG_USART3_IRQ) || defined(CONFIG_USART3_DMA) || defined(CONFIG_USART3_DMA_RX) || defined(CONFIG_USART3_DMA_TX)
 static struct uart_dat usart3_dat;
 #endif
-#ifdef CONFIG_USART3_DMA
+#if defined(CONFIG_USART3_DMA) || defined(CONFIG_USART3_DMA_RX)
 DMA1_CHAN_OWN(3, &USART3->DR, DMA_DIR_PERIPH_TO_MEM, DMA_WIDTH_U8, IRQ_PRIO_USART3);
+#endif
+#if defined(CONFIG_USART3_DMA) || defined(CONFIG_USART3_DMA_TX)
 DMA1_CHAN_OWN(2, &USART3->DR, DMA_DIR_MEM_TO_PERIPH, DMA_WIDTH_U8, IRQ_PRIO_USART3);
 #endif
 static const struct uart_ctx usart3_ctx =
 {
 	.regs		= USART3,
-#if defined(CONFIG_USART3_IRQ) || defined(CONFIG_USART3_DMA)
+#if defined(CONFIG_USART3_IRQ) || defined(CONFIG_USART3_DMA) || defined(CONFIG_USART3_DMA_RX) || defined(CONFIG_USART3_DMA_TX)
 	.dat		= &usart3_dat,
 #endif
-#ifdef CONFIG_USART3_DMA
+#if defined(CONFIG_USART3_DMA) || defined(CONFIG_USART3_DMA_RX)
 	.rx_dma		= &dma1_ch3,
+#endif
+#if defined(CONFIG_USART3_DMA) || defined(CONFIG_USART3_DMA_TX)
 	.tx_dma		= &dma1_ch2,
 #endif
 };
@@ -710,7 +722,7 @@ const struct uart_port usart3 =
 	.ctx		= &usart3_ctx,
 	.name		= "usart3",
 };
-#if defined(CONFIG_USART3_IRQ) || defined(CONFIG_USART3_DMA)
+#if defined(CONFIG_USART3_IRQ) || defined(CONFIG_USART3_DMA) || defined(CONFIG_USART3_DMA_RX) || defined(CONFIG_USART3_DMA_TX)
 void USART3_IRQHandler(void)
 {
 	f1_uart_isr(&usart3);
@@ -719,8 +731,8 @@ void USART3_IRQHandler(void)
 #endif	//	USART3
 
 #if defined(UART4) && defined(CONFIG_UART4)
-#ifdef CONFIG_UART4_DMA
-#error "F1 UART4 has no DMA request mapping; CONFIG_UART4_DMA is invalid on F1"
+#if defined(CONFIG_UART4_DMA) || defined(CONFIG_UART4_DMA_RX) || defined(CONFIG_UART4_DMA_TX)
+#error "F1 UART4 has no DMA request mapping; CONFIG_UART4_DMA[_RX/_TX] is invalid on F1"
 #endif
 #ifdef CONFIG_UART4_IRQ
 static struct uart_dat uart4_dat;
@@ -747,8 +759,8 @@ void UART4_IRQHandler(void)
 #endif	//	UART4
 
 #if defined(UART5) && defined(CONFIG_UART5)
-#ifdef CONFIG_UART5_DMA
-#error "F1 UART5 has no DMA request mapping; CONFIG_UART5_DMA is invalid on F1"
+#if defined(CONFIG_UART5_DMA) || defined(CONFIG_UART5_DMA_RX) || defined(CONFIG_UART5_DMA_TX)
+#error "F1 UART5 has no DMA request mapping; CONFIG_UART5_DMA[_RX/_TX] is invalid on F1"
 #endif
 #ifdef CONFIG_UART5_IRQ
 static struct uart_dat uart5_dat;
