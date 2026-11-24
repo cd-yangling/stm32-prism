@@ -43,7 +43,11 @@ struct sensor_imu_axis_map;
 struct sensor_ops;
 struct icm20948_dat;
 
+#ifdef CONFIG_ICM20948_MAGN
+#define	ICM20948_DAT_SIZE	38
+#else
 #define	ICM20948_DAT_SIZE	26
+#endif
 #define	ICM20948_DAT(name)	OPAQUE_INST(struct icm20948_dat, name, ICM20948_DAT_SIZE)
 
 struct icm20948_dev
@@ -57,6 +61,10 @@ struct icm20948_dev
 	uint8_t									afs_sel;
 	struct icm20948_dat					*	dat;
 	const struct sensor_imu_axis_map	*	axis_map;
+#ifdef CONFIG_ICM20948_MAGN
+	uint8_t									mag_mode;
+	const struct sensor_imu_axis_map	*	mag_axis_map;
+#endif
 };
 
 extern const struct sensor_ops icm20948_sensor_ops;

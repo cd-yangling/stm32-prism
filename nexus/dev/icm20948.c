@@ -40,26 +40,42 @@
 #include "pal/sensor.h"
 #include "dev/icm20948.h"
 
-#define	ICM_WHO_AM_I				0x00u
-#define	ICM_USER_CTRL				0x03u
-#define	ICM_PWR_MGMT_1				0x06u
-#define	ICM_ACCEL_XOUT_H			0x2Du
-#define	ICM_REG_BANK_SEL			0x7Fu
+#define	ICM_WHO_AM_I					0x00u
+#define	ICM_USER_CTRL					0x03u
+#define	ICM_PWR_MGMT_1					0x06u
+#define	ICM_ACCEL_XOUT_H				0x2Du
+#define	ICM_REG_BANK_SEL				0x7Fu
 
-#define	ICM_BANK_0					0x00u
-#define	ICM_BANK_2					0x20u
+#define	ICM_BANK_0						0x00u
+#define	ICM_BANK_2						0x20u
 
-#define	ICM_BANK2_GYRO_SMPLRT_DIV	0x00u
-#define	ICM_BANK2_GYRO_CONFIG_1		0x01u
+#define	ICM_BANK2_GYRO_SMPLRT_DIV		0x00u
+#define	ICM_BANK2_GYRO_CONFIG_1			0x01u
 #define	ICM_BANK2_ACCEL_SMPLRT_DIV_2	0x11u
-#define	ICM_BANK2_ACCEL_CONFIG		0x14u
+#define	ICM_BANK2_ACCEL_CONFIG			0x14u
 
-#define	ICM_ID						0xEAu
+#define	ICM_ID							0xEAu
+
+#ifdef CONFIG_ICM20948_MAGN
+#define	ICM_INT_PIN_CFG					0x0Fu
+#define	ICM_INT_PIN_CFG_BYPASS_EN		0x02u
+
+#define	AK_ADDR7						0x0Cu
+#define	AK_WIA							0x01u
+#define	AK_ID							0x09u
+#define	AK_CNTL2						0x31u
+#define	AK_HXL							0x11u
+#define	AK_ST2_HOFL						0x08u
+#endif
 
 struct icm20948_dat
 {
 	int16_t		raw[7];
 	int16_t		offset[6];
+#ifdef CONFIG_ICM20948_MAGN
+	int16_t		mag[3];
+	int16_t		mag_offset[3];
+#endif
 };
 
 _Static_assert(sizeof(struct icm20948_dat) == ICM20948_DAT_SIZE, "ICM20948_DAT_SIZE out of sync with struct icm20948_dat");
@@ -78,17 +94,17 @@ static int rd_regs(const struct i2c_dev *d, uint8_t reg, uint8_t *buf, uint16_t 
 
 static int icm20948_init(const struct sensor *s)
 {
-	const struct icm20948_dev *m = s->ctx;
+	const struct icm20948_dev *dev = s->ctx;
 	uint8_t id;
 	int r;
 
-	r = wr_reg(m->i2c, ICM_REG_BANK_SEL, ICM_BANK_0);
+	r = wr_reg(dev->i2c, ICM_REG_BANK_SEL, ICM_BANK_0);
 	if (0 != r)
 	{
 		return r;
 	}
 
-	r = rd_regs(m->i2c, ICM_WHO_AM_I, &id, 1u);
+	r = rd_regs(dev->i2c, ICM_WHO_AM_I, &id, 1u);
 	if (0 != r)
 	{
 		return r;
@@ -99,7 +115,7 @@ static int icm20948_init(const struct sensor *s)
 		return -ENODEV;
 	}
 
-	r = wr_reg(m->i2c, ICM_PWR_MGMT_1, 0x80u);
+	r = wr_reg(dev->i2c, ICM_PWR_MGMT_1, 0x80u);
 	if (0 != r)
 	{
 		return r;
@@ -107,59 +123,99 @@ static int icm20948_init(const struct sensor *s)
 
 	delay_ms(100u);
 
-	r = wr_reg(m->i2c, ICM_USER_CTRL, 0x00u);
+	r = wr_reg(dev->i2c, ICM_USER_CTRL, 0x00u);
 	if (0 != r)
 	{
 		return r;
 	}
 
-	r = wr_reg(m->i2c, ICM_PWR_MGMT_1, 0x01u);
+	r = wr_reg(dev->i2c, ICM_PWR_MGMT_1, 0x01u);
 	if (0 != r)
 	{
 		return r;
 	}
 
-	r = wr_reg(m->i2c, ICM_REG_BANK_SEL, ICM_BANK_2);
+	r = wr_reg(dev->i2c, ICM_REG_BANK_SEL, ICM_BANK_2);
 	if (0 != r)
 	{
 		return r;
 	}
 
-	r = wr_reg(m->i2c, ICM_BANK2_GYRO_SMPLRT_DIV, m->gyro_smplrt_div);
+	r = wr_reg(dev->i2c, ICM_BANK2_GYRO_SMPLRT_DIV, dev->gyro_smplrt_div);
 	if (0 != r)
 	{
 		return r;
 	}
 
-	r = wr_reg(m->i2c, ICM_BANK2_GYRO_CONFIG_1,
-		(uint8_t)((m->gfs_sel << 1) | 0x01u | (m->gyro_dlpf_cfg << 3)));
+	r = wr_reg(dev->i2c, ICM_BANK2_GYRO_CONFIG_1,
+		(uint8_t)((dev->gfs_sel << 1) | 0x01u | (dev->gyro_dlpf_cfg << 3)));
 	if (0 != r)
 	{
 		return r;
 	}
 
-	r = wr_reg(m->i2c, ICM_BANK2_ACCEL_SMPLRT_DIV_2, m->accel_smplrt_div);
+	r = wr_reg(dev->i2c, ICM_BANK2_ACCEL_SMPLRT_DIV_2, dev->accel_smplrt_div);
 	if (0 != r)
 	{
 		return r;
 	}
 
-	r = wr_reg(m->i2c, ICM_BANK2_ACCEL_CONFIG,
-		(uint8_t)((m->afs_sel << 1) | 0x01u | (m->accel_dlpf_cfg << 3)));
+	r = wr_reg(dev->i2c, ICM_BANK2_ACCEL_CONFIG,
+		(uint8_t)((dev->afs_sel << 1) | 0x01u | (dev->accel_dlpf_cfg << 3)));
 	if (0 != r)
 	{
 		return r;
 	}
 
-	return wr_reg(m->i2c, ICM_REG_BANK_SEL, ICM_BANK_0);
+	r = wr_reg(dev->i2c, ICM_REG_BANK_SEL, ICM_BANK_0);
+	if (0 != r)
+	{
+		return r;
+	}
+
+#ifdef CONFIG_ICM20948_MAGN
+	{
+		struct i2c_dev ak = *dev->i2c;
+		uint8_t id;
+
+		ak.addr7 = AK_ADDR7;
+
+		r = wr_reg(dev->i2c, ICM_INT_PIN_CFG, ICM_INT_PIN_CFG_BYPASS_EN);
+		if (0 != r)
+		{
+			return r;
+		}
+
+		r = rd_regs(&ak, AK_WIA, &id, 1u);
+		if (0 != r)
+		{
+			return r;
+		}
+
+		if (AK_ID != id)
+		{
+			return -ENODEV;
+		}
+
+		r = wr_reg(&ak, AK_CNTL2, dev->mag_mode);
+		if (0 != r)
+		{
+			return r;
+		}
+	}
+
+	return 0;
+#else
+	return 0;
+#endif
 }
 
 static int icm20948_sample_fetch(const struct sensor *s)
 {
-	const struct icm20948_dev *m = s->ctx;
-	struct icm20948_dat *dat = m->dat;
+	const struct icm20948_dev *dev = s->ctx;
+	struct icm20948_dat *dat = dev->dat;
 	uint8_t b[14];
-	int r = rd_regs(m->i2c, ICM_ACCEL_XOUT_H, b, sizeof(b));
+	int r = rd_regs(dev->i2c, ICM_ACCEL_XOUT_H, b, sizeof(b));
 	int i;
 
 	if (0 != r)
@@ -171,6 +227,31 @@ static int icm20948_sample_fetch(const struct sensor *s)
 	{
 		dat->raw[i] = (int16_t)((b[2 * i] << 8) | b[2 * i + 1]);
 	}
+
+#ifdef CONFIG_ICM20948_MAGN
+	{
+		struct i2c_dev ak = *dev->i2c;
+		uint8_t mb[8];
+
+		ak.addr7 = AK_ADDR7;
+
+		r = rd_regs(&ak, AK_HXL, mb, sizeof(mb));
+		if (0 != r)
+		{
+			return r;
+		}
+
+		if (AK_ST2_HOFL & mb[7])
+		{
+			return -EOVERFLOW;
+		}
+
+		for (i = 0; i < 3; i++)
+		{
+			dat->mag[i] = (int16_t)((mb[2 * i + 1] << 8) | mb[2 * i]);
+		}
+	}
+#endif
 
 	return 0;
 }
@@ -221,12 +302,22 @@ static inline int raw_to_accel_ms2(int16_t raw, uint8_t afs_sel, struct sensor_v
 	return 0;
 }
 
+static inline int raw_to_mag_ut(int16_t raw, struct sensor_value *sv)
+{
+	micro_to_sensor_value((int64_t)raw * 150000, sv);
+
+	return 0;
+}
+
 static int icm20948_channel_get(const struct sensor *s, enum sensor_chan sc, struct sensor_value *sv)
 {
-	const struct icm20948_dev *m = s->ctx;
-	const struct icm20948_dat *dat = m->dat;
+	const struct icm20948_dev *dev = s->ctx;
+	const struct icm20948_dat *dat = dev->dat;
 	int16_t a[3];
 	int16_t g[3];
+#ifdef CONFIG_ICM20948_MAGN
+	int16_t m[3];
+#endif
 	int i, ret;
 
 	for (i = 0; i < 3; i++)
@@ -235,45 +326,75 @@ static int icm20948_channel_get(const struct sensor *s, enum sensor_chan sc, str
 		g[i] = (int16_t)(dat->raw[3 + i] + dat->offset[3 + i]);
 	}
 
-	if (NULL != m->axis_map)
+	if (NULL != dev->axis_map)
 	{
-		sensor_imu_map_axes(a, m->axis_map);
-		sensor_imu_map_axes(g, m->axis_map);
+		sensor_imu_map_axes(a, dev->axis_map);
+		sensor_imu_map_axes(g, dev->axis_map);
 	}
+
+#ifdef CONFIG_ICM20948_MAGN
+	for (i = 0; i < 3; i++)
+	{
+		m[i] = (int16_t)(dat->mag[i] + dat->mag_offset[i]);
+	}
+
+	if (NULL != dev->mag_axis_map)
+	{
+		sensor_imu_map_axes(m, dev->mag_axis_map);
+	}
+#endif
 
 	switch (sc)
 	{
 	case SENSOR_CHAN_ACCEL_X:
-		return raw_to_accel_ms2(a[0], m->afs_sel, sv);
+		return raw_to_accel_ms2(a[0], dev->afs_sel, sv);
 
 	case SENSOR_CHAN_ACCEL_Y:
-		return raw_to_accel_ms2(a[1], m->afs_sel, sv);
+		return raw_to_accel_ms2(a[1], dev->afs_sel, sv);
 
 	case SENSOR_CHAN_ACCEL_Z:
-		return raw_to_accel_ms2(a[2], m->afs_sel, sv);
+		return raw_to_accel_ms2(a[2], dev->afs_sel, sv);
 
 	case SENSOR_CHAN_ACCEL_XYZ:
 		for (i = 0, ret = 0; i < 3 && !ret; i++)
 		{
-			ret = raw_to_accel_ms2(a[i], m->afs_sel, sv + i);
+			ret = raw_to_accel_ms2(a[i], dev->afs_sel, sv + i);
 		}
 		return ret;
 
 	case SENSOR_CHAN_GYRO_X:
-		return raw_to_gyro_rad_s(g[0], m->gfs_sel, sv);
+		return raw_to_gyro_rad_s(g[0], dev->gfs_sel, sv);
 
 	case SENSOR_CHAN_GYRO_Y:
-		return raw_to_gyro_rad_s(g[1], m->gfs_sel, sv);
+		return raw_to_gyro_rad_s(g[1], dev->gfs_sel, sv);
 
 	case SENSOR_CHAN_GYRO_Z:
-		return raw_to_gyro_rad_s(g[2], m->gfs_sel, sv);
+		return raw_to_gyro_rad_s(g[2], dev->gfs_sel, sv);
 
 	case SENSOR_CHAN_GYRO_XYZ:
 		for (i = 0, ret = 0; i < 3 && !ret; i++)
 		{
-			ret = raw_to_gyro_rad_s(g[i], m->gfs_sel, sv + i);
+			ret = raw_to_gyro_rad_s(g[i], dev->gfs_sel, sv + i);
 		}
 		return ret;
+
+#ifdef CONFIG_ICM20948_MAGN
+	case SENSOR_CHAN_MAGN_X:
+		return raw_to_mag_ut(m[0], sv);
+
+	case SENSOR_CHAN_MAGN_Y:
+		return raw_to_mag_ut(m[1], sv);
+
+	case SENSOR_CHAN_MAGN_Z:
+		return raw_to_mag_ut(m[2], sv);
+
+	case SENSOR_CHAN_MAGN_XYZ:
+		for (i = 0, ret = 0; i < 3 && !ret; i++)
+		{
+			ret = raw_to_mag_ut(m[i], sv + i);
+		}
+		return ret;
+#endif
 
 	case SENSOR_CHAN_DIE_TEMP:
 		micro_to_sensor_value(((int64_t)dat->raw[6] * 100000000 / 33387 + 21000000), sv);
@@ -286,10 +407,13 @@ static int icm20948_channel_get(const struct sensor *s, enum sensor_chan sc, str
 
 static int icm20948_channel_get_raw(const struct sensor *s, enum sensor_chan sc, struct sensor_raw_value *srv)
 {
-	const struct icm20948_dev *m = s->ctx;
-	const struct icm20948_dat *dat = m->dat;
+	const struct icm20948_dev *dev = s->ctx;
+	const struct icm20948_dat *dat = dev->dat;
 	int16_t a[3];
 	int16_t g[3];
+#ifdef CONFIG_ICM20948_MAGN
+	int16_t m[3];
+#endif
 
 	for (int i = 0; i < 3; i++)
 	{
@@ -297,11 +421,23 @@ static int icm20948_channel_get_raw(const struct sensor *s, enum sensor_chan sc,
 		g[i] = (int16_t)(dat->raw[3 + i] + dat->offset[3 + i]);
 	}
 
-	if (NULL != m->axis_map)
+	if (NULL != dev->axis_map)
 	{
-		sensor_imu_map_axes(a, m->axis_map);
-		sensor_imu_map_axes(g, m->axis_map);
+		sensor_imu_map_axes(a, dev->axis_map);
+		sensor_imu_map_axes(g, dev->axis_map);
 	}
+
+#ifdef CONFIG_ICM20948_MAGN
+	for (int i = 0; i < 3; i++)
+	{
+		m[i] = (int16_t)(dat->mag[i] + dat->mag_offset[i]);
+	}
+
+	if (NULL != dev->mag_axis_map)
+	{
+		sensor_imu_map_axes(m, dev->mag_axis_map);
+	}
+#endif
 
 	switch (sc)
 	{
@@ -351,6 +487,31 @@ static int icm20948_channel_get_raw(const struct sensor *s, enum sensor_chan sc,
 		}
 		return 0;
 
+#ifdef CONFIG_ICM20948_MAGN
+	case SENSOR_CHAN_MAGN_X:
+		srv->type			= SENSOR_RAW_INT16;
+		srv->data.i16		= m[0];
+		return 0;
+
+	case SENSOR_CHAN_MAGN_Y:
+		srv->type			= SENSOR_RAW_INT16;
+		srv->data.i16		= m[1];
+		return 0;
+
+	case SENSOR_CHAN_MAGN_Z:
+		srv->type			= SENSOR_RAW_INT16;
+		srv->data.i16		= m[2];
+		return 0;
+
+	case SENSOR_CHAN_MAGN_XYZ:
+		for (int i = 0; i < 3; i++, srv++)
+		{
+			srv->type		= SENSOR_RAW_INT16;
+			srv->data.i16	= m[i];
+		}
+		return 0;
+#endif
+
 	case SENSOR_CHAN_DIE_TEMP:
 		srv->type			= SENSOR_RAW_INT16;
 		srv->data.i16		= dat->raw[6];
@@ -364,8 +525,8 @@ static int icm20948_channel_get_raw(const struct sensor *s, enum sensor_chan sc,
 static int icm20948_attr_set_raw(const struct sensor *s, enum sensor_chan sc,
 	enum sensor_attr attr, const struct sensor_raw_value *srv)
 {
-	const struct icm20948_dev *m = s->ctx;
-	struct icm20948_dat *dat = m->dat;
+	const struct icm20948_dev *dev = s->ctx;
+	struct icm20948_dat *dat = dev->dat;
 
 	if (SENSOR_ATTR_OFFSET != attr)
 	{
@@ -389,9 +550,9 @@ static int icm20948_attr_set_raw(const struct sensor *s, enum sensor_chan sc,
 			v[i] = srv[i].data.i16;
 		}
 
-		if (NULL != m->axis_map)
+		if (NULL != dev->axis_map)
 		{
-			sensor_imu_unmap_axes(v, m->axis_map);
+			sensor_imu_unmap_axes(v, dev->axis_map);
 		}
 
 		if (SENSOR_CHAN_GYRO_XYZ == sc)
@@ -411,6 +572,35 @@ static int icm20948_attr_set_raw(const struct sensor *s, enum sensor_chan sc,
 
 		return 0;
 	}
+
+#ifdef CONFIG_ICM20948_MAGN
+	case SENSOR_CHAN_MAGN_XYZ:
+	{
+		int16_t v[3];
+
+		for (int i = 0; i < 3; i++)
+		{
+			if (SENSOR_RAW_INT16 != srv[i].type)
+			{
+				return -EINVAL;
+			}
+
+			v[i] = srv[i].data.i16;
+		}
+
+		if (NULL != dev->mag_axis_map)
+		{
+			sensor_imu_unmap_axes(v, dev->mag_axis_map);
+		}
+
+		for (int i = 0; i < 3; i++)
+		{
+			dat->mag_offset[i] = v[i];
+		}
+
+		return 0;
+	}
+#endif
 
 	default:
 		return -EOPNOTSUPP;

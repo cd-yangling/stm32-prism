@@ -119,6 +119,11 @@ enum sensor_chan
 
 	SENSOR_CHAN_DIE_TEMP,			//	摄氏度
 	SENSOR_CHAN_VOLTAGE,			//	伏
+
+	SENSOR_CHAN_MAGN_XYZ,			//	uT
+	SENSOR_CHAN_MAGN_X,				//	uT
+	SENSOR_CHAN_MAGN_Y,				//	uT
+	SENSOR_CHAN_MAGN_Z,				//	uT
 };
 
 struct sensor;

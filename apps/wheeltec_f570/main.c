@@ -83,7 +83,7 @@ int main(void)
 {
 	const struct led_dev *led1 = board.led1;
 	const struct led_dev *led2 = board.led2;
-	struct sensor_value sv;
+	struct sensor_value sv[3];
 	struct sensor_raw_value srv[3];
 
 	if (brd_devices_init())
@@ -96,11 +96,19 @@ int main(void)
 
 	printf("wheeltec f570 console up\r\n");
 
+	srv[0].type = SENSOR_RAW_INT16;
+	srv[0].data.i16 = 105;
+	srv[1].type = SENSOR_RAW_INT16;
+	srv[1].data.i16 = 95;
+	srv[2].type = SENSOR_RAW_INT16;
+	srv[2].data.i16 = -290;
+	sensor_attr_set_raw(board.imu, SENSOR_CHAN_MAGN_XYZ, SENSOR_ATTR_OFFSET, srv);
+
 	for (uint8_t i = 0u; 10u > i; i++)
 	{
 		sensor_sample_fetch(board.vbat_sen);
-		sensor_channel_get(board.vbat_sen, SENSOR_CHAN_VOLTAGE, &sv);
-		printf("vbat=%dmV\r\n", sv.val1 * 1000 + sv.val2 / 1000);
+		sensor_channel_get(board.vbat_sen, SENSOR_CHAN_VOLTAGE, &sv[0]);
+		printf("vbat=%dmV\r\n", sv[0].val1 * 1000 + sv[0].val2 / 1000);
 		delay_ms(500);
 	}
 
@@ -141,15 +149,45 @@ int main(void)
 					srv[0].data.i16, srv[1].data.i16, srv[2].data.i16);
 			}
 
+			if (0 == sensor_channel_get(board.imu, SENSOR_CHAN_ACCEL_XYZ, sv))
+			{
+				printf("asi %d %d %d\r\n",
+					sv[0].val1 * 1000 + sv[0].val2 / 1000,
+					sv[1].val1 * 1000 + sv[1].val2 / 1000,
+					sv[2].val1 * 1000 + sv[2].val2 / 1000);
+			}
+
 			if (0 == sensor_channel_get_raw(board.imu, SENSOR_CHAN_GYRO_XYZ, srv))
 			{
 				printf("g %d %d %d\r\n",
 					srv[0].data.i16, srv[1].data.i16, srv[2].data.i16);
 			}
 
+			if (0 == sensor_channel_get(board.imu, SENSOR_CHAN_GYRO_XYZ, sv))
+			{
+				printf("gsi %d %d %d\r\n",
+					sv[0].val1 * 1000 + sv[0].val2 / 1000,
+					sv[1].val1 * 1000 + sv[1].val2 / 1000,
+					sv[2].val1 * 1000 + sv[2].val2 / 1000);
+			}
+
 			if (0 == sensor_channel_get_raw(board.imu, SENSOR_CHAN_DIE_TEMP, srv))
 			{
 				printf("t %d\r\n", srv[0].data.i16);
+			}
+
+			if (0 == sensor_channel_get_raw(board.imu, SENSOR_CHAN_MAGN_XYZ, srv))
+			{
+				printf("m %d %d %d\r\n",
+					srv[0].data.i16, srv[1].data.i16, srv[2].data.i16);
+			}
+
+			if (0 == sensor_channel_get(board.imu, SENSOR_CHAN_MAGN_XYZ, sv))
+			{
+				printf("msi %d %d %d\r\n",
+					sv[0].val1 * 1000 + sv[0].val2 / 1000,
+					sv[1].val1 * 1000 + sv[1].val2 / 1000,
+					sv[2].val1 * 1000 + sv[2].val2 / 1000);
 			}
 		}
 	}

@@ -179,6 +179,14 @@ static const struct i2c_dev imu1 =
 	.spd_hz	= 400000u,
 };
 static const struct sensor_imu_axis_map imu1_axis_map = SENSOR_IMU_AXIS_MAP_XRIGHT_YFRONT_ZUP_INIT;
+#ifdef CONFIG_ICM20948_MAGN
+static const struct sensor_imu_axis_map imu1_mag_axis_map =
+{
+	.x	= { .src = SENSOR_IMU_AXIS_Y, .neg = 0 },
+	.y	= { .src = SENSOR_IMU_AXIS_X, .neg = 0 },
+	.z	= { .src = SENSOR_IMU_AXIS_Z, .neg = 0 },
+};
+#endif
 static const struct icm20948_dev imu1_dev =
 {
 	.i2c				= &imu1,
@@ -190,6 +198,10 @@ static const struct icm20948_dev imu1_dev =
 	.afs_sel			= 0u,
 	.dat				= imu1_dat,
 	.axis_map			= &imu1_axis_map,
+#ifdef CONFIG_ICM20948_MAGN
+	.mag_mode			= 0x08u,
+	.mag_axis_map		= &imu1_mag_axis_map,
+#endif
 };
 static const struct sensor imu_sen =
 {

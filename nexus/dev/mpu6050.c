@@ -80,12 +80,12 @@ static int rd_regs(const struct i2c_dev *d, uint8_t reg, uint8_t *buf, uint16_t 
 
 static int mpu6050_init(const struct sensor *s)
 {
-	const struct mpu6050_dev *m = s->ctx;
+	const struct mpu6050_dev *dev = s->ctx;
 	uint8_t id;
 	int r;
 
 	//	读取 MPU_ID
-	r = rd_regs(m->i2c, MPU_WHO_AM_I, &id, 1u);
+	r = rd_regs(dev->i2c, MPU_WHO_AM_I, &id, 1u);
 	if (0 != r)
 	{
 		return r;
@@ -97,35 +97,35 @@ static int mpu6050_init(const struct sensor *s)
 	}
 
 	/* 唤醒 + CLKSEL=001 手册推荐 PLL(X 轴陀螺参考) */
-	r = wr_reg(m->i2c, MPU_PWR_MGMT_1, 0x01u);
+	r = wr_reg(dev->i2c, MPU_PWR_MGMT_1, 0x01u);
 	if (0 != r)
 	{
 		return r;
 	}
 
 	//	采样率 设置
-	r = wr_reg(m->i2c, MPU_SMPLRT_DIV, m->smplrt_div);
+	r = wr_reg(dev->i2c, MPU_SMPLRT_DIV, dev->smplrt_div);
 	if (0 != r)
 	{
 		return r;
 	}
 
 	//	DLPF 设置
-	r = wr_reg(m->i2c, MPU_CONFIG, m->dlpf_cfg);
+	r = wr_reg(dev->i2c, MPU_CONFIG, dev->dlpf_cfg);
 	if (0 != r)
 	{
 		return r;
 	}
 
 	//	陀螺仪 FS_SEL 设置
-	r = wr_reg(m->i2c, MPU_GYRO_CONFIG, (uint8_t)(m->gfs_sel << 3));
+	r = wr_reg(dev->i2c, MPU_GYRO_CONFIG, (uint8_t)(dev->gfs_sel << 3));
 	if (0 != r)
 	{
 		return r;
 	}
 
 	//	加速度计 AFS_SEL 设置
-	r = wr_reg(m->i2c, MPU_ACCEL_CONFIG, (uint8_t)(m->afs_sel << 3));
+	r = wr_reg(dev->i2c, MPU_ACCEL_CONFIG, (uint8_t)(dev->afs_sel << 3));
 	if (0 != r)
 	{
 		return r;
@@ -138,10 +138,10 @@ static int mpu6050_init(const struct sensor *s)
 //	14B 原子连读进快照:ax..gz 同一采样时刻
 static int mpu6050_sample_fetch(const struct sensor *s)
 {
-	const struct mpu6050_dev *m = s->ctx;
-	struct mpu6050_dat *dat = m->dat;
+	const struct mpu6050_dev *dev = s->ctx;
+	struct mpu6050_dat *dat = dev->dat;
 	uint8_t b[14];
-	int r = rd_regs(m->i2c, MPU_ACCEL_XOUT_H, b, sizeof(b));
+	int r = rd_regs(dev->i2c, MPU_ACCEL_XOUT_H, b, sizeof(b));
 	int i;
 
 	if (0 != r)
@@ -234,8 +234,8 @@ static inline int raw_to_accel_ms2(int16_t raw, uint8_t afs_sel, struct sensor_v
 //	按照 sensor 泛型要求全部转换成 国际单位制 SI
 static int mpu6050_channel_get(const struct sensor *s, enum sensor_chan sc, struct sensor_value *sv)
 {
-	const struct mpu6050_dev *m = s->ctx;
-	const struct mpu6050_dat *dat = m->dat;
+	const struct mpu6050_dev *dev = s->ctx;
+	const struct mpu6050_dat *dat = dev->dat;
 	int16_t a[3];
 	int16_t g[3];
 	int i, ret;
@@ -246,43 +246,43 @@ static int mpu6050_channel_get(const struct sensor *s, enum sensor_chan sc, stru
 		g[i] = (int16_t)(dat->raw[4 + i] + dat->offset[3 + i]);
 	}
 
-	if (NULL != m->axis_map)
+	if (NULL != dev->axis_map)
 	{
-		sensor_imu_map_axes(a, m->axis_map);
-		sensor_imu_map_axes(g, m->axis_map);
+		sensor_imu_map_axes(a, dev->axis_map);
+		sensor_imu_map_axes(g, dev->axis_map);
 	}
 
 	switch (sc)
 	{
 	case SENSOR_CHAN_ACCEL_X:
-		return raw_to_accel_ms2(a[0], m->afs_sel, sv);
+		return raw_to_accel_ms2(a[0], dev->afs_sel, sv);
 
 	case SENSOR_CHAN_ACCEL_Y:
-		return raw_to_accel_ms2(a[1], m->afs_sel, sv);
+		return raw_to_accel_ms2(a[1], dev->afs_sel, sv);
 
 	case SENSOR_CHAN_ACCEL_Z:
-		return raw_to_accel_ms2(a[2], m->afs_sel, sv);
+		return raw_to_accel_ms2(a[2], dev->afs_sel, sv);
 
 	case SENSOR_CHAN_ACCEL_XYZ:
 		for (i = 0, ret = 0; i < 3 && !ret; i++)
 		{
-			ret = raw_to_accel_ms2(a[i], m->afs_sel, sv + i);
+			ret = raw_to_accel_ms2(a[i], dev->afs_sel, sv + i);
 		}
 		return ret;
 
 	case SENSOR_CHAN_GYRO_X:
-		return raw_to_gyro_rad_s(g[0], m->gfs_sel, sv);
+		return raw_to_gyro_rad_s(g[0], dev->gfs_sel, sv);
 
 	case SENSOR_CHAN_GYRO_Y:
-		return raw_to_gyro_rad_s(g[1], m->gfs_sel, sv);
+		return raw_to_gyro_rad_s(g[1], dev->gfs_sel, sv);
 
 	case SENSOR_CHAN_GYRO_Z:
-		return raw_to_gyro_rad_s(g[2], m->gfs_sel, sv);
+		return raw_to_gyro_rad_s(g[2], dev->gfs_sel, sv);
 
 	case SENSOR_CHAN_GYRO_XYZ:
 		for (i = 0, ret = 0; i < 3 && !ret; i++)
 		{
-			ret = raw_to_gyro_rad_s(g[i], m->gfs_sel, sv + i);
+			ret = raw_to_gyro_rad_s(g[i], dev->gfs_sel, sv + i);
 		}
 		return ret;
 
@@ -297,8 +297,8 @@ static int mpu6050_channel_get(const struct sensor *s, enum sensor_chan sc, stru
 
 static int mpu6050_channel_get_raw(const struct sensor *s, enum sensor_chan sc, struct sensor_raw_value *srv)
 {
-	const struct mpu6050_dev *m = s->ctx;
-	const struct mpu6050_dat *dat = m->dat;
+	const struct mpu6050_dev *dev = s->ctx;
+	const struct mpu6050_dat *dat = dev->dat;
 	int16_t a[3];
 	int16_t g[3];
 
@@ -308,10 +308,10 @@ static int mpu6050_channel_get_raw(const struct sensor *s, enum sensor_chan sc, 
 		g[i] = (int16_t)(dat->raw[4 + i] + dat->offset[3 + i]);
 	}
 
-	if (NULL != m->axis_map)
+	if (NULL != dev->axis_map)
 	{
-		sensor_imu_map_axes(a, m->axis_map);
-		sensor_imu_map_axes(g, m->axis_map);
+		sensor_imu_map_axes(a, dev->axis_map);
+		sensor_imu_map_axes(g, dev->axis_map);
 	}
 
 	switch (sc)
@@ -392,11 +392,11 @@ static void mpu_bounce(const struct pin_port *pt, struct pin_callback *cb)
 static int mpu6050_trigger_set(const struct sensor *s,
 	const struct sensor_trigger *trig, sensor_trigger_handler_t handler)
 {
-	const struct mpu6050_dev *m = s->ctx;
-	struct mpu6050_dat *dat = m->dat;
+	const struct mpu6050_dev *dev = s->ctx;
+	struct mpu6050_dat *dat = dev->dat;
 	int r;
 
-	if ((NULL == m->int_pin) || (NULL == trig)
+	if ((NULL == dev->int_pin) || (NULL == trig)
 		|| (SENSOR_TRIG_DATA_READY != trig->type))
 	{
 		return -EOPNOTSUPP;
@@ -404,50 +404,50 @@ static int mpu6050_trigger_set(const struct sensor *s,
 
 	if (NULL == handler)
 	{
-		r = wr_reg(m->i2c, MPU_INT_ENABLE, 0x00u);
+		r = wr_reg(dev->i2c, MPU_INT_ENABLE, 0x00u);
 		if (0 != r)
 		{
 			return r;
 		}
 
-		pin_irq_configure(m->int_pin, PIN_INT_DISABLE);
-		pin_remove_callback(m->int_pin->port, &dat->cb);
+		pin_irq_configure(dev->int_pin, PIN_INT_DISABLE);
+		pin_remove_callback(dev->int_pin->port, &dat->cb);
 		dat->h = NULL;
 		return 0;
 	}
 
-	pin_configure(m->int_pin);
-	pin_remove_callback(m->int_pin->port, &dat->cb);
+	pin_configure(dev->int_pin);
+	pin_remove_callback(dev->int_pin->port, &dat->cb);
 	dat->h = handler;
 	dat->s = s;
-	pin_callback_init(&dat->cb, mpu_bounce, m->int_pin->pin);
-	pin_add_callback(m->int_pin->port, &dat->cb);
+	pin_callback_init(&dat->cb, mpu_bounce, dev->int_pin->pin);
+	pin_add_callback(dev->int_pin->port, &dat->cb);
 
-	r = pin_irq_configure(m->int_pin, PIN_INT_RISING);
+	r = pin_irq_configure(dev->int_pin, PIN_INT_RISING);
 	if (0 != r)
 	{
-		pin_remove_callback(m->int_pin->port, &dat->cb);
+		pin_remove_callback(dev->int_pin->port, &dat->cb);
 		dat->h = NULL;
 		return r;
 	}
 
-	r = wr_reg(m->i2c, MPU_INT_PIN_CFG, 0x00u);
+	r = wr_reg(dev->i2c, MPU_INT_PIN_CFG, 0x00u);
 	if (0 != r)
 	{
-		pin_irq_configure(m->int_pin, PIN_INT_DISABLE);
-		pin_remove_callback(m->int_pin->port, &dat->cb);
+		pin_irq_configure(dev->int_pin, PIN_INT_DISABLE);
+		pin_remove_callback(dev->int_pin->port, &dat->cb);
 		dat->h = NULL;
 		return r;
 	}
 
-	return wr_reg(m->i2c, MPU_INT_ENABLE, 0x01u);
+	return wr_reg(dev->i2c, MPU_INT_ENABLE, 0x01u);
 }
 
 static int mpu6050_attr_set_raw(const struct sensor *s, enum sensor_chan sc,
 	enum sensor_attr attr, const struct sensor_raw_value *srv)
 {
-	const struct mpu6050_dev *m = s->ctx;
-	struct mpu6050_dat *dat = m->dat;
+	const struct mpu6050_dev *dev = s->ctx;
+	struct mpu6050_dat *dat = dev->dat;
 
 	if (SENSOR_ATTR_OFFSET != attr)
 	{
@@ -471,9 +471,9 @@ static int mpu6050_attr_set_raw(const struct sensor *s, enum sensor_chan sc,
 			v[i] = srv[i].data.i16;
 		}
 
-		if (NULL != m->axis_map)
+		if (NULL != dev->axis_map)
 		{
-			sensor_imu_unmap_axes(v, m->axis_map);
+			sensor_imu_unmap_axes(v, dev->axis_map);
 		}
 
 		if (SENSOR_CHAN_GYRO_XYZ == sc)
