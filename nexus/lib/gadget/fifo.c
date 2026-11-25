@@ -32,11 +32,10 @@
 
 /* Copyright (C) 2026 YangLing */
 
+#include "barrier.h"
 #include "fifo.h"
 #include <errno.h>
 #include <string.h>
-
-#define barrier() __asm volatile ("" ::: "memory")
 
 static unsigned int rounddown_pow_of_two(unsigned int n)
 {
