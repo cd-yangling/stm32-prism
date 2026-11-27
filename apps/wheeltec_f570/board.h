@@ -39,6 +39,8 @@ struct led_dev;
 struct pin_desc;
 struct sensor;
 struct tty;
+struct lc307;
+struct stp23l;
 
 struct board
 {
@@ -48,6 +50,8 @@ struct board
 	const struct sensor		*vbat_sen;
 	const struct sensor		*imu;
 	struct tty				*console;
+	struct lc307			*oflow;
+	struct stp23l			*laser;
 };
 
 extern const struct board board;

@@ -42,6 +42,8 @@
 #include "dev/voltage_divider.h"
 #include "dev/icm20948.h"
 #include "subsys/tty.h"
+#include "dev/sensor/lc307.h"
+#include "dev/sensor/stp23l.h"
 #include "board.h"
 
 #define	BOARD_C
@@ -125,10 +127,127 @@ static struct tty con_tty =
 #define	BOARD_CONSOLE	(NULL)
 #endif
 
+#if defined(CONFIG_USART3)
+PIN_DESC(usart3_tx, gpiob, 10, PIN_ALT | PIN_MUX(7) | PIN_SPEED_VERY_HIGH);
+PIN_DESC(usart3_rx, gpiob, 11, PIN_ALT | PIN_MUX(7));
+static const struct uart_pins usart3_pins =
+{
+	.tx			= &usart3_tx,
+	.rx			= &usart3_rx,
+};
+static const struct uart_config oflow_cfg =
+{
+	.baud		= 19200,
+	.data_bits	= 8,
+	.parity		= 0,
+	.stop_bits	= 1,
+};
+static const struct uart_dev oflow_dev =
+{
+	.port		= &usart3,
+	.cfg		= &oflow_cfg,
+};
+
+static const unsigned char oflow_head[] = {0xFE, 0x0A};
+static const struct deframer_cfg oflow_dfr_cfg =
+{
+	.head		= oflow_head,
+	.head_len	= 2u,
+	.frame_len	= 14u,
+	.ck_kind	= DEFRAMER_CK_XOR,
+	.ck_init	= 0u,
+	.ck_off		= 2u,
+	.ck_pos		= 12u,
+	.has_tail	= 1u,
+	.tail_val	= 0x55u,
+};
+static struct lc307 oflow_sen =
+{
+	.io			=
+	{
+		.dev	= &oflow_dev,
+		.dfr_cfg= &oflow_dfr_cfg,
+#if defined(CONFIG_USART3_DMA) || defined(CONFIG_USART3_DMA_RX)
+		.mode	= STRM_DEFRAMER_ASYNC,
+#elif defined(CONFIG_USART3_IRQ)
+		.mode	= STRM_DEFRAMER_IRQ,
+#else
+		.mode	= STRM_DEFRAMER_POLL,
+#endif
+	},
+};
+#define	BOARD_OFLOW	(&oflow_sen)
+#else
+#define	BOARD_OFLOW	(NULL)
+#endif
+
+#if defined(CONFIG_UART5)
+PIN_DESC(uart5_tx, gpioc, 12, PIN_ALT | PIN_MUX(8) | PIN_SPEED_VERY_HIGH);
+PIN_DESC(uart5_rx, gpiod, 2, PIN_ALT | PIN_MUX(8));
+static const struct uart_pins uart5_pins =
+{
+	.tx			= &uart5_tx,
+	.rx			= &uart5_rx,
+};
+static const struct uart_config laser_cfg =
+{
+	.baud		= 230400,
+	.data_bits	= 8,
+	.parity		= 0,
+	.stop_bits	= 1,
+};
+static const struct uart_dev laser_dev =
+{
+	.port		= &uart5,
+	.cfg		= &laser_cfg,
+};
+
+static const unsigned char laser_head[] =
+{
+	0xAA, 0xAA, 0xAA, 0xAA, 0x00, 0x02, 0x00, 0x00, 0xB8, 0x00,
+};
+static const struct deframer_cfg laser_dfr_cfg =
+{
+	.head		= laser_head,
+	.head_len	= 10u,
+	.frame_len	= 195u,
+	.ck_kind	= DEFRAMER_CK_SUM8,
+	.ck_init	= 0u,
+	.ck_off		= 4u,
+	.ck_pos		= 194u,
+	.has_tail	= 0u,
+	.tail_val	= 0u,
+};
+static struct stp23l laser_sen =
+{
+	.io			=
+	{
+		.dev	= &laser_dev,
+		.dfr_cfg= &laser_dfr_cfg,
+#if defined(CONFIG_UART5_DMA) || defined(CONFIG_UART5_DMA_RX)
+		.mode	= STRM_DEFRAMER_ASYNC,
+#elif defined(CONFIG_UART5_IRQ)
+		.mode	= STRM_DEFRAMER_IRQ,
+#else
+		.mode	= STRM_DEFRAMER_POLL,
+#endif
+	},
+};
+#define	BOARD_LASER	(&laser_sen)
+#else
+#define	BOARD_LASER	(NULL)
+#endif
+
 static void brd_uart_init(void)
 {
 #if defined(CONFIG_USART1)
 	uart_dev_init(&con_dev, &usart1_pins);
+#endif
+#if defined(CONFIG_USART3)
+	uart_dev_init(&oflow_dev, &usart3_pins);
+#endif
+#if defined(CONFIG_UART5)
+	uart_dev_init(&laser_dev, &uart5_pins);
 #endif
 }
 
@@ -230,6 +349,8 @@ const struct board board =
 	.vbat_sen	= BOARD_VBAT_SEN,
 	.imu		= BOARD_IMU,
 	.console	= BOARD_CONSOLE,
+	.oflow		= BOARD_OFLOW,
+	.laser		= BOARD_LASER,
 };
 
 void brd_init(void)

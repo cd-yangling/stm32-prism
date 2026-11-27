@@ -37,4 +37,14 @@
 
 #define	ARRAY_SIZE(a)	(sizeof(a) / sizeof((a)[0]))
 
+static inline unsigned short get_le16(const unsigned char *p)
+{
+	return (unsigned short)(((unsigned short)p[1] << 8) | p[0]);
+}
+
+static inline unsigned int get_le32(const unsigned char *p)
+{
+	return ((unsigned int)get_le16(p + 2) << 16) | get_le16(p);
+}
+
 #endif	//	__NEXUS_LIB_GADGET_UTIL_HEADER__

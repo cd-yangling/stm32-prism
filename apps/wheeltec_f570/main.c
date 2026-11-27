@@ -42,6 +42,9 @@
 #include "pal/led.h"
 #include "pal/pin.h"
 #include "pal/sensor.h"
+#include "pal/uart.h"
+#include "dev/sensor/lc307.h"
+#include "dev/sensor/stp23l.h"
 #include "die.h"
 
 static int brd_devices_init(void)
@@ -79,6 +82,7 @@ static int brd_devices_init(void)
 	return 0;
 }
 
+#if 0
 int main(void)
 {
 	const struct led_dev *led1 = board.led1;
@@ -189,6 +193,118 @@ int main(void)
 					sv[1].val1 * 1000 + sv[1].val2 / 1000,
 					sv[2].val1 * 1000 + sv[2].val2 / 1000);
 			}
+		}
+	}
+}
+#endif
+
+static unsigned int oflow_cnt;
+static unsigned int laser_cnt;
+static unsigned int stat_deadline;
+
+int main(void)
+{
+	const struct lc307_rec *orec;
+	const struct stp23l_rec *lrec;
+
+	if (brd_devices_init())
+		die();
+
+	pin_configure(board.buzzer);
+	pin_set(board.buzzer, 1);
+	delay_ms(200);
+	pin_set(board.buzzer, 0);
+
+	printf("wheeltec f570 stream sensors up\r\n");
+
+	if (NULL != board.oflow)
+	{
+		printf("lc307 init %d\r\n", lc307_init(board.oflow));
+	}
+
+	if (NULL != board.laser)
+	{
+		printf("laser init %d\r\n", stp23l_init(board.laser));
+	}
+
+	stat_deadline = tick_get() + 1000u;
+
+	for (;;)
+	{
+		delay_us(1000);
+
+		if (NULL != board.oflow)
+		{
+			lc307_feed(board.oflow);
+
+			while (NULL != (orec = lc307_peek(board.oflow)))
+			{
+				printf("oflow fx=%d fy=%d dt=%u v=%x ver=%u v1m=%d/%d cyc=%u\r\n",
+						orec->flowx, orec->flowy,
+						(unsigned int)orec->dt_us,
+						orec->valid, orec->ver,
+						(int)(lc307_flow_rad(orec->flowx, orec->dt_us) * 1000.0f),
+						(int)(lc307_flow_rad(orec->flowy, orec->dt_us) * 1000.0f),
+						orec->ts);
+				lc307_advance(board.oflow);
+				oflow_cnt++;
+			}
+		}
+
+		if (NULL != board.laser)
+		{
+			stp23l_feed(board.laser);
+
+			while (NULL != (lrec = stp23l_peek(board.laser)))
+			{
+				short mn = 32767;
+				short mx = -32768;
+				long sum = 0;
+				unsigned int n;
+
+				for (n = 0u; 12u > n; n++)
+				{
+					short dv = lrec->dist_mm[n];
+
+					sum += dv;
+
+					if (dv < mn)
+					{
+						mn = dv;
+					}
+
+					if (dv > mx)
+					{
+						mx = dv;
+					}
+				}
+
+				printf("laser d=%d spr=%d c=%u cyc=%u\r\n",
+						(int)(sum / 12), (int)(mx - mn),
+						lrec->quality[0], lrec->ts);
+				stp23l_advance(board.laser);
+				laser_cnt++;
+			}
+		}
+
+		if (tick_expired(stat_deadline))
+		{
+			stat_deadline = tick_get() + 1000u;
+#if defined(CONFIG_UART_IRQ) || defined(CONFIG_UART_DMA)
+			printf("stat oflow=%u/s laser=%u/s drop=%u/%u fd=%u/%u\r\n",
+					oflow_cnt, laser_cnt,
+					(NULL != board.oflow) ? lc307_rx_drop_get(board.oflow) : 0u,
+					(NULL != board.laser) ? stp23l_rx_drop_get(board.laser) : 0u,
+					(NULL != board.oflow) ? lc307_frame_drop_get(board.oflow) : 0u,
+					(NULL != board.laser) ? stp23l_frame_drop_get(board.laser) : 0u);
+#else
+			printf("stat oflow=%u/s laser=%u/s fd=%u/%u\r\n",
+					oflow_cnt, laser_cnt,
+					(NULL != board.oflow) ? lc307_frame_drop_get(board.oflow) : 0u,
+					(NULL != board.laser) ? stp23l_frame_drop_get(board.laser) : 0u);
+#endif
+			oflow_cnt = 0u;
+			laser_cnt = 0u;
 		}
 	}
 }
